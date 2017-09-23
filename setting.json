@@ -1,6 +1,5 @@
 {
     "host":"127.0.0.1",
     "db":"rs_threads_board",
-    "user":"root",
-    "password":"456456"
+    "user":"root"
 }
