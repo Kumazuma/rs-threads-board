@@ -31,7 +31,7 @@ enum ResponseContentType{
     Xml
 }
 fn check_accept_type(request:&rouille::Request)->Option<ResponseContentType>{
-    let accept:&str = request.header("accept").unwrap_or("text/html");
+    let accept:&str = request.header("Accept").unwrap_or("text/html");
     let accept_types = accept.split(",");
     let select_accept_type = accept_types.max_by(|one, two|{
         let mut s:Vec< _ > = one.split("q=").collect();
@@ -58,7 +58,8 @@ fn check_accept_type(request:&rouille::Request)->Option<ResponseContentType>{
         }
     }).unwrap();
     let v:Vec<&str> = select_accept_type.split("/").collect();
-    match v[1]{
+    eprintln!("{:?}",v);
+    match v[1].split(";").next().unwrap(){
         "html"|"xhtml"=>Some(ResponseContentType::Html),
         "json"=>Some(ResponseContentType::Json),
         "xml"=>Some(ResponseContentType::Xml),
@@ -106,15 +107,41 @@ fn main() {
                 */
                 let list = model.get_threads_list();
                 let mut s = Vec::new();
-                templates::default(&mut s).unwrap();
+                
+                templates::default(&mut s,list).unwrap();
                 rouille::Response::from_data("text/html;charset=utf-8", s)
             },
             (GET) (/threads)=>{
+                let list = model.get_threads_list();
+                if let Some(res_type) = check_accept_type(request){
+                    return match res_type{
+                        ResponseContentType::Json=>{
+                            let v = try_or_400!(serde_json::to_vec(&list));
+                            rouille::Response::from_data("application/json", v)
+                        },
+                        ResponseContentType::Html=>{
+                            let mut s = Vec::new();
+                            templates::default(&mut s,list).unwrap();
+                            rouille::Response::from_data("text/html;charset=utf-8", s)
+                        },
+                        ResponseContentType::Xml=>{
+                            let mut s = Vec::new();
+                            templates::xml_threads_list(&mut s,list).unwrap();
+                            rouille::Response::from_data("application/xml", s)
+                        }
+                    };
+                }
+                else{
+                    let mut s = Vec::new();
+                    templates::default(&mut s,list).unwrap();
+                    return rouille::Response::from_data("text/html;charset=utf-8", s);
+                }
                 
-                rouille::Response::text("스레드 리스트 반환")
             },
             (GET) (/threads/)=>{
-                rouille::Response::text("스레드 리스트 반환")
+                let list = model.get_threads_list();
+                let v = try_or_400!(serde_json::to_vec(&list));
+                rouille::Response::from_data("application/json", v)
             },
             (POST) (/threads)=>{
                 rouille::Response::text("스레드 생성")

@@ -1,5 +1,6 @@
 @* A very simple template with no arguments.  This line is a comment. *@
-@()
+@use model::Thread;
+@(list:Vec<Thread>)
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -32,11 +33,28 @@
         </div>
     </nav>
     <div class="container">
+@if list.len() == 0{
+        <span>스레드가 없습니다. 새로운 스레드를 생성해 보세요</span>
+}
+else{
         <ul>
-            <li>
-                
-            </li>
+    @for item in list{
+        <li>
+            <a href="/threads/@item.get_uid()">
+                <span class="subject">@item.get_subject()</span>
+                <span class="created-datetime">생성된 시간:@item.get_created_datetime()</span>
+                <span class="recent-update-datetime">업데이트 시간:@item.get_recent_update_datetime()</span>
+                <span class="user">
+                    <img src="@item.get_opener().get_gravatar_url()" class="user-gravta">
+                    <span>@item.get_opener().get_nickname()</span>
+                    <input type="hidden" value="@item.get_opener().get_uid()">
+                <span>
+            </a>
+        </li>
+    }
         </ul>
+}
+        
     </div>
 </body>
 </html>

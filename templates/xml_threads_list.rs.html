@@ -1,0 +1,18 @@
+@* A very simple template with no arguments.  This line is a comment. *@
+@use model::Thread;
+@(list:Vec<Thread>)
+<xml version="1.0" encoding="utf-8" >
+<threads>
+@for item in list{
+    <thread>
+        <uid>@item.get_uid()</uid>
+        <subject>@item.get_subject()</subject>
+        <opener>
+            <uid>@item.get_opener().get_uid()</uid>
+            <nickname>@item.get_opener().get_nickname()</nickname>
+            <email>@item.get_opener().get_email()</email>
+        </opener>
+    </thread>
+}
+    
+</threads>
