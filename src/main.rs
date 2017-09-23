@@ -145,7 +145,7 @@ fn main() {
         let setting:&ServerSetting = unsafe{
             std::mem::transmute::<_, _>(setting)
         };
-        eprintln!("{}",setting.db);
+        //eprintln!("{}",setting.db);
         let mut model = try_or_400!(pool.get_conn());
 		router!(request,
             (GET) (/)=>{

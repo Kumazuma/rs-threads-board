@@ -11,6 +11,7 @@
         <script src="/js/bootstrap.min.js"></script>
         <script src="/js/common.js"></script>
         <link rel="stylesheet" href="/css/bootstrap.css" />
+        <link rel="stylesheet" href="/css/common.css" />
         <title>Document</title>
     </head>
     <body style="padding-top:70px;">
@@ -51,24 +52,31 @@
             <span>스레드가 없습니다. 새로운 스레드를 생성해 보세요</span>
 }
 else{
-            <ul>
-    @for item in list{
-            <li>
-                <a href="/threads/@item.get_uid()">
-                    <span class="subject">@item.get_subject()</span>
-                    <span class="created-datetime">생성된 시간:@item.get_created_datetime()</span>
-                    <span class="recent-update-datetime">업데이트 시간:@item.get_recent_update_datetime()</span>
-                    <span class="user">
-                        <img src="@item.get_opener().get_gravatar_url()" class="user-gravta">
-                        <span>@item.get_opener().get_nickname()</span>
-                        <input type="hidden" value="@item.get_opener().get_uid()">
-                    <span>
-                </a>
-            </li>
+            <table id="thread-list" class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>주제</th>
+                        <th>개시자</th>
+                        <th>마지막 갱신</th>
+                    </tr>
+                </thead>
+                <tbody>
+@for item in list{
+                    <tr>
+                        <td><a href="/threads/@item.get_uid()">@item.get_subject()</a></td>
+                        <td>
+                            <span class="user">
+                                <img src="@item.get_opener().get_gravatar_url()" class="user-gravta">
+                                <span>@item.get_opener().get_nickname()</span>
+                                <input type="hidden" value="@item.get_opener().get_uid()">
+                            </span>
+                        </td>
+                        <td>@item.get_recent_update_datetime()</td>
+                    </tr>
     }
-            </ul>
 }
-            
+                </tbody>
+            </table>
         </div>
     </body>
 </html>

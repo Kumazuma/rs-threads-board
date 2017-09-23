@@ -34,3 +34,31 @@ input[type='radio'].toggle-radio-button:checked + label{
     border: 2px solid #000;
     filter: invert(100%);
 }
+ul.thread-list{
+    padding:0px;
+}
+ul.thread-list li{
+    display:inline-block;
+    width:100%;
+}
+ul.thread-list li>a{
+    float:left;
+    text-decoration: none;
+}
+ul.thread-list li:nth-child(even){
+}
+ul.thread-list li:nth-child(odd){
+    background-color: #DDD;
+}
+ul.thread-list span.user{
+    float:right;
+}
+ul.thread-list span.recent-update-datetime{
+    display: block;
+}
+ul.thread-list span.created-datetime{
+    float:right;
+}
+#thread-list tbody tr td:first-child{
+    width:80%;
+}

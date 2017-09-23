@@ -64,7 +64,7 @@ impl User {
     pub fn get_gravatar_url(&self)->String{
         let mut md5 = crypto::md5::Md5::new();
         md5.input_str(self.email.as_str());
-        format!("https://www.gravatar.com/avatar/{}?s=40", md5.result_str())
+        format!("https://www.gravatar.com/avatar/{}?s=24", md5.result_str())
     }
 }
 impl Model for mysql::PooledConn {
