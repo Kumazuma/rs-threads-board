@@ -1,0 +1,16 @@
+[package]
+name = "rs-thread-board"
+version = "0.1.0"
+authors = ["Damezuma <qweads12@gmail.com>"]
+build = "src/build.rs"
+
+[build-dependencies]
+ructe = "^0.3"
+
+[dependencies]
+mysql = "12.0.3"
+chrono = { version = "0.4", features = ["serde"] }
+rouille = "1.0.3"
+serde = "1.0.8"
+serde_json = "1.0.2"
+serde_derive = "1.0.8"

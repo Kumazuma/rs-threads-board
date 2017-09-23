@@ -1,0 +1,36 @@
+label{
+    padding:4px;
+}
+#calender{
+
+}
+#calender td{
+    cursor:pointer;
+}
+input[type="checkbox"]:checked + label
+{
+    font-weight: bold;
+    background-color: #888;
+}
+td.shift-date{
+    background-color: #333;
+    color:#FFF;
+}
+#calender td.click-date{
+    background-color: #333;
+    color:#FFF;
+}
+input[type='radio'].toggle-radio-button{
+    display: none;
+}
+input[type='radio'].toggle-radio-button + label{
+    border: 2px solid #000;
+    background: #FFF;
+    min-width: 8em;
+    text-align: center;
+    margin: 0px 0.5em;
+}
+input[type='radio'].toggle-radio-button:checked + label{
+    border: 2px solid #000;
+    filter: invert(100%);
+}
