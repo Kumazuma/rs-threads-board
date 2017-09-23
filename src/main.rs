@@ -6,7 +6,7 @@ extern crate serde;
 extern crate serde_json;
 extern crate chrono;
 #[macro_use]
-extern crate mysql;
+extern crate postgres;
 extern crate crypto;
 use templates::*;
 use std::path::{Path, PathBuf};
@@ -17,6 +17,7 @@ use std::time::Duration;
 use std::io;
 use std::io::prelude::*;
 mod model;
+use postgres::{Connection, TlsMode};
 use model::Model;
 #[derive(Serialize, Deserialize, Debug)]
 struct ServerSetting{
@@ -126,17 +127,6 @@ fn main() {
         setting =serde_json::from_reader(f).unwrap();
     } 
     eprintln!("{:?}",setting);
-    let mut builder = mysql::OptsBuilder::default();
-    builder.ip_or_hostname(Some(setting.host.as_str()))
-		.db_name(Some(setting.db.as_str()))
-		.user(Some(setting.user.as_str()))
-		.pass(Some(setting.password.as_str()))
-		.tcp_keepalive_time_ms(Some(1000))
-		.read_timeout(Some(Duration::new(2,0)))
-		.write_timeout(Some(Duration::new(2,0)))
-        .prefer_socket(false)
-        .tcp_port(3306);
-    let pool = mysql::Pool::new(mysql::Opts::from(builder)).unwrap();
 
 	println!("Now listening on localhost:9999");
 	// The `start_server` starts listening forever on the given address.
@@ -145,8 +135,12 @@ fn main() {
         let setting:&ServerSetting = unsafe{
             std::mem::transmute::<_, _>(setting)
         };
+        let mut conparam = postgres::params::Builder::new();
+        let p = conparam.user(setting.user.as_str(),Some(setting.password.as_str())).database(setting.db.as_str())
+        .build(postgres::params::Host::Tcp(setting.host.clone()));
+        let mut model = postgres::Connection::connect(p,TlsMode::None).expect("connect error");
         //eprintln!("{}",setting.db);
-        let mut model = try_or_400!(pool.get_conn());
+        //let mut model = try_or_400!(pool.get_conn());
 		router!(request,
             (GET) (/)=>{
                 /*

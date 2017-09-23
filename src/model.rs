@@ -1,12 +1,11 @@
 extern crate chrono;
 extern crate serde_derive;
-extern crate mysql;
+extern crate postgres;
 extern crate serde;
 extern crate serde_json;
 extern crate crypto;
 use self::serde::ser::{Serialize, Serializer, SerializeStruct};
 use self::chrono::NaiveDateTime;
-use mysql::prelude::*;
 use std::sync::Arc;
 use self::crypto::digest::Digest;
 use std::error::Error;
@@ -66,24 +65,23 @@ impl User {
         format!("https://www.gravatar.com/avatar/{}?s=24", md5.result_str())
     }
 }
-impl Model for mysql::PooledConn {
+impl Model for postgres::Connection {
     fn get_threads_list(&mut self,offset:usize, count:usize)->Vec<Thread>{
-        let sql =format!("SELECT * FROM v_thread_list LIMIT {}, {}", offset, count);
-        let params:&[&ToValue] = &[];
-        return self.prep_exec(sql,params).unwrap().map(|row|{
-            let mut row = row.unwrap();
-     
+        println!("{}",line!());
+        let sql =format!("SELECT * FROM v_thread_list LIMIT {} OFFSET {}", offset, count);
+        //let params:&[&ToValue] = &[];
+        return  self.query(&sql,&[]).expect("query error").iter().map(|row|{
             Thread{
-                uid:row.take("uid").expect("uid"),
-                subject:row.take("subject").expect("uid"),
+                uid:row.get("uid"),
+                subject:row.get("subject"),
                 opener:User{
-                    uid:row.take("opener_uid").expect("opener_uid"),
-                    nickname:row.take("opener_nickname").expect("opener_nickname"),
-                    email:row.take("opener_email").expect("opener_email"),
+                    uid:row.get("opener_uid"),
+                    nickname:row.get("opener_nickname"),
+                    email:row.get("opener_email"),
                     password:String::from("")
                 },
-                created_datetime:row.take("created_datetime").expect("created_datetime"),
-                recent_update_datetime:row.take("recent_update").expect("recent_update")
+                created_datetime:row.get("created_datetime"),
+                recent_update_datetime:row.get("recent_update")
 
             }
         }).collect();
