@@ -3,58 +3,72 @@
 @(list:Vec<Thread>)
 <!DOCTYPE html>
 <html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <script src="http://code.jquery.com/jquery-3.2.1.min.js"></script>
-    <script src="/js/bootstrap.min.js"></script>
-    <link rel="stylesheet" href="/css/bootstrap.css" />
-    <title>Document</title>
-</head>
-<body style="padding-top:70px;">
-    <nav class="navbar navbar-default navbar-fixed-top">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta http-equiv="X-UA-Compatible" content="ie=edge">
+        <script src="http://code.jquery.com/jquery-3.2.1.min.js"></script>
+        <script src="/js/bootstrap.min.js"></script>
+        <script src="/js/common.js"></script>
+        <link rel="stylesheet" href="/css/bootstrap.css" />
+        <title>Document</title>
+    </head>
+    <body style="padding-top:70px;">
+        <nav class="navbar navbar-default navbar-fixed-top">
+            <div class="container">
+                <div class="navbar-header">
+                    <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#menu-navbar-1">
+                        <span class="sr-only">Toggle Navigation</span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                    </button>
+                    <a class="navbar-brand" href="/">rs-threads-board</a>
+                </div>
+                <div class ="collapse navbar-collapse" id = "menu-navbar-1">
+                    <ul id="menu" class="nav navbar-nav">
+                        <li role="presentation"><a href="/threads">목록</a></li>
+                        <li role="presentation"><a href="/tags">태그 목록</a></li>
+                    </ul>
+                    <form id="sign-in-form" class="navbar-form navbar-right" role="sign-in">
+                        <div class="form-group">
+                          <input type="text" class="form-control" placeholder="E-Mail">
+                          <input type="password" class="form-control" placeholder="password">
+                        </div>
+                        <button type="submit" class="btn btn-default">sign in</button>
+                        <a href="/signup" class="btn btn-default">sign up</a>
+                    </form>
+                    
+                    <ul style="display:none;" id="user-info" class="nav navbar-nav navbar-right">
+                        <li><a id="user-nickname" href="#">테스트1</a></li>
+                        <li><img id="user-gravatar"></li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
         <div class="container">
-            <div class="navbar-header">
-                <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#menu-navbar-1">
-                    <span class="sr-only">Toggle Navigation</span>
-                    <span class="icon-bar"/>
-                    <span class="icon-bar"/>
-                    <span class="icon-bar"/>
-                </button>
-                <a class="navbar-brand" href="/">rs-threads-board</a>
-            </div>
-            <div class ="collapse navbar-collapse" id = "menu-navbar-1">
-                <ul id="menu" class="nav navbar-nav">
-                    <li role="presentation"><a href="/threads">목록</a></li>
-                    <li role="presentation"><a href="/tags">태그 목록</a></li>
-                </ul>
-            </div>
-        </div>
-    </nav>
-    <div class="container">
 @if list.len() == 0{
-        <span>스레드가 없습니다. 새로운 스레드를 생성해 보세요</span>
+            <span>스레드가 없습니다. 새로운 스레드를 생성해 보세요</span>
 }
 else{
-        <ul>
+            <ul>
     @for item in list{
-        <li>
-            <a href="/threads/@item.get_uid()">
-                <span class="subject">@item.get_subject()</span>
-                <span class="created-datetime">생성된 시간:@item.get_created_datetime()</span>
-                <span class="recent-update-datetime">업데이트 시간:@item.get_recent_update_datetime()</span>
-                <span class="user">
-                    <img src="@item.get_opener().get_gravatar_url()" class="user-gravta">
-                    <span>@item.get_opener().get_nickname()</span>
-                    <input type="hidden" value="@item.get_opener().get_uid()">
-                <span>
-            </a>
-        </li>
+            <li>
+                <a href="/threads/@item.get_uid()">
+                    <span class="subject">@item.get_subject()</span>
+                    <span class="created-datetime">생성된 시간:@item.get_created_datetime()</span>
+                    <span class="recent-update-datetime">업데이트 시간:@item.get_recent_update_datetime()</span>
+                    <span class="user">
+                        <img src="@item.get_opener().get_gravatar_url()" class="user-gravta">
+                        <span>@item.get_opener().get_nickname()</span>
+                        <input type="hidden" value="@item.get_opener().get_uid()">
+                    <span>
+                </a>
+            </li>
     }
-        </ul>
+            </ul>
 }
-        
-    </div>
-</body>
+            
+        </div>
+    </body>
 </html>

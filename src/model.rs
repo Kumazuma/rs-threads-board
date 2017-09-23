@@ -11,7 +11,8 @@ use std::sync::Arc;
 use self::crypto::digest::Digest;
 use std::error::Error;
 pub trait Model{
-     fn get_threads_list(&mut self)->Vec<Thread>;
+     fn get_threads_list(&mut self,offset:usize, count:usize)->Vec<Thread>;
+     
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Thread{
@@ -67,8 +68,8 @@ impl User {
     }
 }
 impl Model for mysql::PooledConn {
-    fn get_threads_list(&mut self)->Vec<Thread>{
-        let sql = "SELECT * FROM v_thread_list";
+    fn get_threads_list(&mut self,offset:usize, count:usize)->Vec<Thread>{
+        let sql =format!("SELECT * FROM v_thread_list LIMIT {}, {}", offset, count);
         let params:&[&ToValue] = &[];
         return self.prep_exec(sql,params).unwrap().map(|row|{
             let mut row = row.unwrap();

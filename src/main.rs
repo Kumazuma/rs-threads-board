@@ -7,7 +7,7 @@ extern crate serde_json;
 extern crate chrono;
 #[macro_use]
 extern crate mysql;
-
+extern crate crypto;
 use templates::*;
 use std::path::{Path, PathBuf};
 use std::fs::File;
@@ -19,16 +19,28 @@ use std::io::prelude::*;
 mod model;
 use model::Model;
 #[derive(Serialize, Deserialize, Debug)]
-struct DbSetting{
+struct ServerSetting{
 	host:String,
 	db:String,
 	user:String,
-	password:String
+	password:String,
+    aes_iv:String,
+    aes_key:String
 }
 enum ResponseContentType{
     Html,
     Json,
     Xml
+}
+#[derive(Serialize, Deserialize, Debug)]
+struct SignCheckResponse{
+    is_signin:bool,
+    sign:Option<SignInfomation>
+}
+#[derive(Serialize, Deserialize, Debug)]
+struct SignInfomation{
+    email:String,
+    nickname:String
 }
 fn check_accept_type(request:&rouille::Request)->Option<ResponseContentType>{
     let accept:&str = request.header("Accept").unwrap_or("text/html");
@@ -66,13 +78,52 @@ fn check_accept_type(request:&rouille::Request)->Option<ResponseContentType>{
         _=>None
     }
 }
+fn sign_in(setting:&ServerSetting, request:&rouille::Request)->Result<SignInfomation, ()>{
+    
+    return Err(());
+}
+fn check_sign(setting:&ServerSetting,request:&rouille::Request)->Result<SignInfomation, ()>{
+    if let Some((_, val)) = rouille::input::cookies(&request).find(|&(n, _)| n == "sign-signiture") {
+        println!("Value of cookie = {:?}", val);
+        use crypto::aes::*;
+        use crypto::blockmodes::*;
+        use crypto::buffer::*;
+        let mut decryptor = cbc_decryptor(KeySize::KeySize128, setting.aes_key.as_bytes(),setting.aes_iv.as_bytes(), PkcsPadding);
+        let mut reader = RefReadBuffer::new(val.as_bytes());
+        let mut buffer:[u8;1024 * 4] = [0;1024*4];
+        let mut len = 0usize;
+        {
+            let mut writer = RefWriteBuffer::new(buffer.as_mut());
+            match decryptor.decrypt(&mut reader,&mut writer,false){
+                Ok(v)=>{
+                    
+                },
+                Err(e)=>{
+                    return Err(());
+                }
+            }
+            len = writer.position();
+        }
+        
+        let f:SignInfomation =match serde_json::from_slice(&buffer[0..len]){
+            Ok(v)=>v,
+            Err(e)=>{
+                eprintln!("{}",e);
+                return Err(());
+            }
+        };
+        return Err(());
+    }
+    else{
+        return Err(());
+    }
+}
 fn main() {
     
-    let setting:DbSetting;
+    let setting:ServerSetting;
     {
         let f =std::fs::File::open("./setting.json").unwrap();
         setting =serde_json::from_reader(f).unwrap();
-
     } 
     eprintln!("{:?}",setting);
     let mut builder = mysql::OptsBuilder::default();
@@ -90,6 +141,11 @@ fn main() {
 	println!("Now listening on localhost:9999");
 	// The `start_server` starts listening forever on the given address.
 	let server = Server::new("127.0.0.1:9999", move |request| {
+        let setting:*const _ = &setting;
+        let setting:&ServerSetting = unsafe{
+            std::mem::transmute::<_, _>(setting)
+        };
+        eprintln!("{}",setting.db);
         let mut model = try_or_400!(pool.get_conn());
 		router!(request,
             (GET) (/)=>{
@@ -105,14 +161,30 @@ fn main() {
                     rouille::Response::from_data("text/html;charset=utf-8", s)
                 }
                 */
-                let list = model.get_threads_list();
+                let offset:usize = match request.get_param("offset").unwrap_or(String::from("0")).parse(){
+                    Ok(v)=>v,
+                    Err( _ )=>0usize
+                };
+                let count:usize = match request.get_param("offset").unwrap_or(String::from("25")).parse(){
+                    Ok(v)=>v,
+                    Err( _ )=>25usize
+                };
+                let list = model.get_threads_list(offset,count);
                 let mut s = Vec::new();
                 
                 templates::default(&mut s,list).unwrap();
                 rouille::Response::from_data("text/html;charset=utf-8", s)
             },
             (GET) (/threads)=>{
-                let list = model.get_threads_list();
+                let offset:usize = match request.get_param("offset").unwrap_or(String::from("0")).parse(){
+                    Ok(v)=>v,
+                    Err( _ )=>0usize
+                };
+                let count:usize = match request.get_param("offset").unwrap_or(String::from("25")).parse(){
+                    Ok(v)=>v,
+                    Err( _ )=>25usize
+                };
+                let list = model.get_threads_list(offset,count);
                 if let Some(res_type) = check_accept_type(request){
                     return match res_type{
                         ResponseContentType::Json=>{
@@ -139,7 +211,15 @@ fn main() {
                 
             },
             (GET) (/threads/)=>{
-                let list = model.get_threads_list();
+                let offset:usize = match request.get_param("offset").unwrap_or(String::from("0")).parse(){
+                    Ok(v)=>v,
+                    Err( _ )=>0usize
+                };
+                let count:usize = match request.get_param("offset").unwrap_or(String::from("25")).parse(){
+                    Ok(v)=>v,
+                    Err( _ )=>25usize
+                };
+                let list = model.get_threads_list(offset,count);
                 let v = try_or_400!(serde_json::to_vec(&list));
                 rouille::Response::from_data("application/json", v)
             },
@@ -195,6 +275,18 @@ fn main() {
             (GET) (/users/{user_name:String})=>{
                 eprint!("{}",user_name);
                 rouille::Response::text("회원 정보")
+            },
+            (GET) (/signin/check)=>{
+                match check_sign(setting,request){
+                    Ok(v)=>{
+
+                    },
+                    Err(())=>{
+
+                    }
+                }
+                rouille::Response::text("로그아웃")
+                
             },
             (PUT) (/users/{user_name:String})=>{
                 eprint!("{}",user_name);
