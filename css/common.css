@@ -62,3 +62,21 @@ ul.thread-list span.created-datetime{
 #thread-list tbody tr td:first-child{
     width:80%;
 }
+#thread-list .user{
+    position: relative;
+}
+#thread-list .user>span{
+    position: absolute;
+    visibility: hidden;
+}
+#thread-list .user:hover>span{
+    visibility: visible;
+    top:100%;
+    margin-left:-100%;
+    left:0%;
+    color:#FFF;
+    background-color: #333;
+    border-radius: 9px;
+    padding:9px;
+    z-index: 9999;
+}
