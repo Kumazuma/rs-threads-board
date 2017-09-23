@@ -49,3 +49,12 @@ CREATE TABLE `tb_comments` (
 	CONSTRAINT `FK__tb_threads` FOREIGN KEY (`thread_uid`) REFERENCES `tb_threads` (`uid`)
 );
 ```
+
+### v_thread_list
+```sql
+SELECT tb_threads.uid, tb_threads.subject, tb_threads.created_datetime, tb_threads.opener_uid, tb_threads.opener_nickname, tb_users.email as opener_email, recent_update
+FROM tb_threads
+INNER JOIN tb_users ON tb_threads.opener_uid = tb_users.uid
+INNER JOIN (SELECT tb_comments.thread_uid, MAX(tb_comments.write_datetime) as `recent_update` FROM tb_comments GROUP BY thread_uid) as `comments_max` ON tb_threads.uid = comments_max.thread_uid 
+ORDER BY recent_update DESC 
+```
