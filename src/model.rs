@@ -68,8 +68,9 @@ impl User {
 impl Model for postgres::Connection {
     fn get_threads_list(&mut self,offset:usize, count:usize)->Vec<Thread>{
         println!("{}",line!());
-        let sql =format!("SELECT * FROM v_thread_list LIMIT {} OFFSET {}", offset, count);
+        let sql =format!("SELECT * FROM v_thread_list LIMIT {} OFFSET {}", count,  offset);
         //let params:&[&ToValue] = &[];
+        println!("{}",sql);
         return  self.query(&sql,&[]).expect("query error").iter().map(|row|{
             Thread{
                 uid:row.get("uid"),
