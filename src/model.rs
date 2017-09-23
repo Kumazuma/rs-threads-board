@@ -12,7 +12,6 @@ use self::crypto::digest::Digest;
 use std::error::Error;
 pub trait Model{
      fn get_threads_list(&mut self,offset:usize, count:usize)->Vec<Thread>;
-     
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Thread{
