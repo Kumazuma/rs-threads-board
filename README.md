@@ -1,6 +1,6 @@
 # rs-threads-board
 ## table schema
-###tb_users
+### tb_users
 ```sql
 CREATE TABLE `tb_users` (
 	`uid` INT(11) NOT NULL AUTO_INCREMENT,
@@ -11,7 +11,7 @@ CREATE TABLE `tb_users` (
 	UNIQUE INDEX `email` (`email`)
 );
 ```
-###tb_threads
+### tb_threads
 ```sql
 CREATE TABLE `tb_threads` (
 	`uid` INT(11) NOT NULL AUTO_INCREMENT,
