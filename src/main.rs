@@ -17,6 +17,8 @@ use std::time::Duration;
 use std::io;
 use std::io::prelude::*;
 mod model;
+mod db_conn;
+use db_conn::*;
 use model::Model;
 #[derive(Serialize, Deserialize, Debug)]
 struct ServerSetting{

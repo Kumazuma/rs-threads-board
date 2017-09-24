@@ -1,29 +1,40 @@
 extern crate chrono;
 extern crate serde_derive;
-extern crate mysql;
+
 extern crate serde;
 extern crate serde_json;
 extern crate crypto;
 use self::serde::ser::{Serialize, Serializer, SerializeStruct};
 use self::chrono::NaiveDateTime;
-use mysql::prelude::*;
+
 use std::sync::Arc;
 use self::crypto::digest::Digest;
 use std::error::Error;
+pub enum ConditionUserFind{
+    ByEMail(String),
+    ByNickname(String)
+}
 pub trait Model{
      fn get_threads_list(&mut self,offset:usize, count:usize)->Vec<Thread>;
-     
+     fn get_user(&mut self,condition:ConditionUserFind)->Option<User>;
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Thread{
     uid:i32,
     subject:String,
     opener:User,
-    created_datetime:NaiveDateTime,
     recent_update_datetime:NaiveDateTime
 }
 
 impl Thread{
+    pub fn new(uid:i32, subject:String, recent_update_datetime:NaiveDateTime, opener:User)->Thread{
+        Thread{
+            uid:uid,
+            subject:subject,
+            recent_update_datetime:recent_update_datetime,
+            opener:opener
+        }
+    }
     pub fn get_subject(&self)->&str{
         self.subject.as_str()
     }
@@ -32,9 +43,6 @@ impl Thread{
     }
     pub fn get_opener(&self)->&User{
         &self.opener
-    }
-    pub fn get_created_datetime(&self)->&NaiveDateTime{
-        &self.created_datetime
     }
     pub fn get_recent_update_datetime(&self)->&NaiveDateTime{
         &self.recent_update_datetime
@@ -48,6 +56,14 @@ pub struct User{
     password:String
 }
 impl User {
+    pub fn new(uid:i32, nickname:String, email:String, password:Option<String>)->User{
+        User{
+            uid:uid,
+            nickname:nickname,
+            email:email,
+            password:password.unwrap_or(String::new())
+        }
+    }
     // add code here
     pub fn get_uid(&self)->i32{
         self.uid
@@ -66,28 +82,4 @@ impl User {
         md5.input_str(self.email.as_str());
         format!("https://www.gravatar.com/avatar/{}?s=24", md5.result_str())
     }
-}
-impl Model for mysql::PooledConn {
-    fn get_threads_list(&mut self,offset:usize, count:usize)->Vec<Thread>{
-        let sql =format!("SELECT * FROM v_thread_list LIMIT {}, {}", offset, count);
-        let params:&[&ToValue] = &[];
-        return self.prep_exec(sql,params).unwrap().map(|row|{
-            let mut row = row.unwrap();
-     
-            Thread{
-                uid:row.take("uid").expect("uid"),
-                subject:row.take("subject").expect("uid"),
-                opener:User{
-                    uid:row.take("opener_uid").expect("opener_uid"),
-                    nickname:row.take("opener_nickname").expect("opener_nickname"),
-                    email:row.take("opener_email").expect("opener_email"),
-                    password:String::from("")
-                },
-                created_datetime:row.take("created_datetime").expect("created_datetime"),
-                recent_update_datetime:row.take("recent_update").expect("recent_update")
-
-            }
-        }).collect();
-    }
-    // add code here
 }
