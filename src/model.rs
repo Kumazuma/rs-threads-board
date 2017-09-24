@@ -14,9 +14,13 @@ pub enum ConditionUserFind{
     ByEMail(String),
     ByNickname(String)
 }
+pub enum ModelError{
+    CollapseInsertData(String)
+}
 pub trait Model{
      fn get_threads_list(&mut self,offset:usize, count:usize)->Vec<Thread>;
      fn get_user(&mut self,condition:ConditionUserFind)->Option<User>;
+     fn add_new_user(&mut self, user:User)->Result<(), ModelError>;
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Thread{

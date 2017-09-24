@@ -60,8 +60,11 @@ ul.thread-list span.created-datetime{
     float:right;
 }
 #thread-list tbody tr td:first-child{
-    width:80%;
+
 }
+#thread-list tbody tr td:nth-child(2){
+}
+    
 #thread-list .user{
     position: relative;
 }
@@ -79,4 +82,10 @@ ul.thread-list span.created-datetime{
     border-radius: 9px;
     padding:9px;
     z-index: 9999;
+}
+.error-msg{
+    visibility: hidden;
+}
+.has-error .error-msg{
+    visibility: visible;
 }

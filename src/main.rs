@@ -44,7 +44,25 @@ struct SignInfomation{
     email:String,
     nickname:String
 }
-fn check_accept_type(request:&rouille::Request)->Option<ResponseContentType>{
+#[derive(Serialize, Deserialize, Debug)]
+struct JsonResponse{
+    code:i32,
+    msg:String
+}
+fn to_sha3(text:&str)->String{
+    use crypto::digest::Digest;
+    use crypto::sha3::Sha3;
+
+    // create a SHA3-512 object
+    let mut hasher = Sha3::sha3_512();
+
+    // write input message
+    hasher.input_str(text);
+
+    // read hash digest
+    hasher.result_str()
+}
+fn check_accept_type(request:&rouille::Request)->ResponseContentType{
     let accept:&str = request.header("Accept").unwrap_or("text/html");
     let accept_types = accept.split(",");
     let select_accept_type = accept_types.max_by(|one, two|{
@@ -73,12 +91,12 @@ fn check_accept_type(request:&rouille::Request)->Option<ResponseContentType>{
     }).unwrap();
     let v:Vec<&str> = select_accept_type.split("/").collect();
     eprintln!("{:?}",v);
-    match v[1].split(";").next().unwrap(){
-        "html"|"xhtml"=>Some(ResponseContentType::Html),
-        "json"=>Some(ResponseContentType::Json),
-        "xml"=>Some(ResponseContentType::Xml),
-        _=>None
-    }
+    return match v[1].split(";").next().unwrap(){
+        "html"|"xhtml"=>ResponseContentType::Html,
+        "json"=>ResponseContentType::Json,
+        "xml"=>ResponseContentType::Xml,
+        _=>ResponseContentType::Html
+    };
 }
 fn sign_in(setting:&ServerSetting, request:&rouille::Request)->Result<SignInfomation, ()>{
     
@@ -187,29 +205,22 @@ fn main() {
                     Err( _ )=>25usize
                 };
                 let list = model.get_threads_list(offset,count);
-                if let Some(res_type) = check_accept_type(request){
-                    return match res_type{
-                        ResponseContentType::Json=>{
-                            let v = try_or_400!(serde_json::to_vec(&list));
-                            rouille::Response::from_data("application/json", v)
-                        },
-                        ResponseContentType::Html=>{
-                            let mut s = Vec::new();
-                            templates::default(&mut s,list).unwrap();
-                            rouille::Response::from_data("text/html;charset=utf-8", s)
-                        },
-                        ResponseContentType::Xml=>{
-                            let mut s = Vec::new();
-                            templates::xml_threads_list(&mut s,list).unwrap();
-                            rouille::Response::from_data("application/xml", s)
-                        }
-                    };
-                }
-                else{
-                    let mut s = Vec::new();
-                    templates::default(&mut s,list).unwrap();
-                    return rouille::Response::from_data("text/html;charset=utf-8", s);
-                }
+                return match check_accept_type(request){
+                    ResponseContentType::Json=>{
+                        let v = try_or_400!(serde_json::to_vec(&list));
+                        rouille::Response::from_data("application/json", v)
+                    },
+                    ResponseContentType::Html=>{
+                        let mut s = Vec::new();
+                        templates::default(&mut s,list).unwrap();
+                        rouille::Response::from_data("text/html;charset=utf-8", s)
+                    },
+                    ResponseContentType::Xml=>{
+                        let mut s = Vec::new();
+                        templates::xml_threads_list(&mut s,list).unwrap();
+                        rouille::Response::from_data("application/xml", s)
+                    }
+                };
                 
             },
             (GET) (/threads/)=>{
@@ -271,8 +282,62 @@ fn main() {
                 eprint!("{}",tag);
                 rouille::Response::text("태그가 붙여진 스레드 리스트")
             },
+            (GET) (/signup)=>{
+                let mut s = Vec::new();
+                templates::signup(&mut s).unwrap();
+                return rouille::Response::from_data("text/html;charset=utf-8", s);
+            },
             (POST) (/users)=>{
-                rouille::Response::text("회원가입")
+                let input = try_or_400!(post_input!(request, {
+                    email: String,
+                    nickname: String,
+                    password:String
+                }));
+                let user = model::User::new(0, input.nickname, input.email, Some(to_sha3(input.password.as_str())));
+                match model.add_new_user(user){
+                    Ok( _ )=>{
+                        match check_accept_type(request){
+                            ResponseContentType::Html=>{
+                                //let mut s = Vec::new();
+                                //templates::redirection(&mut s,"/","회원가입이 완료되었습니다.").unwrap();
+                                //return rouille::Response::from_data("text/html;charset=utf-8", s);
+                            },
+                            ResponseContentType::Json=>{
+                                let res = JsonResponse{
+                                    code:0i32,
+                                    msg:String::from("가입이 완료되었습니다.")
+                                };
+                                let res = try_or_400!(serde_json::to_vec(&res));
+                                return rouille::Response::from_data("application/json", res);
+                            },
+                            ResponseContentType::Xml=>{
+
+                            }
+                        }
+                    },
+                    Err( e )=>match e{
+                        model::ModelError::CollapseInsertData(f)=>{
+                            match check_accept_type(request){
+                                ResponseContentType::Html=>{
+                                    
+                                },
+                                ResponseContentType::Json=>{
+                                    let res = JsonResponse{
+                                        code:-1i32,
+                                        msg:String::from("이미 가입된 이메일과 중복됩니다.")
+                                    };
+                                    let res = try_or_400!(serde_json::to_vec(&res));
+                                    return rouille::Response::from_data("application/json", res).with_status_code(400);
+                                },
+                                ResponseContentType::Xml=>{
+
+                                }
+                            }
+                        },
+                        _=>{}
+                    }
+                }
+                rouille::Response::text("회원 가입")
             },
             (GET) (/users/{user_name:String})=>{
                 eprint!("{}",user_name);

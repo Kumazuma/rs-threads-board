@@ -3,7 +3,6 @@ use mysql::prelude::*;
 
 use model::*;
 
-
 impl Model for mysql::PooledConn {
     fn get_threads_list(&mut self,offset:usize, count:usize)->Vec<Thread>{
         let sql =format!("SELECT * FROM v_thread_list LIMIT {}, {}", offset, count);
@@ -46,6 +45,20 @@ impl Model for mysql::PooledConn {
             return Some(res);
         }
         return None;
+    }
+    fn add_new_user(&mut self, user:User)->Result<(), ModelError>{
+        let mut stmt = self.prepare(r"INSERT INTO tb_users
+                                       (email, nickname, password)
+                                   VALUES
+                                       (:email, :nickname, :password)").unwrap();
+        if let Err(e) = stmt.execute(params!{
+            "email" => user.get_email(),
+            "nickname" => user.get_nickname(),
+            "password" => user.get_password(),
+        }){
+            return Err(ModelError::CollapseInsertData(String::from("E-Mail")));
+        }
+        return Ok(());
     }
     // add code here
 }
