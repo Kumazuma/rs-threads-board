@@ -108,32 +108,35 @@ fn sign_in(setting:&ServerSetting, request:&rouille::Request, user:&model::User)
         nickname:user.get_nickname().to_string(),
         user_agent:request.header("User-Agent").unwrap_or("").to_string()
     };
+    println!("{}", s.user_agent);
     use crypto::aes::*;
     use crypto::blockmodes::*;
     use crypto::buffer::*;
     eprintln!("{} {}", setting.aes_key.as_bytes().len(), setting.aes_iv.as_bytes().len());
     let mut encryptor = cbc_encryptor(KeySize::KeySize256, setting.aes_key.as_bytes(),setting.aes_iv.as_bytes(), PkcsPadding);
+    eprintln!("{}", serde_json::to_string(&s).unwrap());
     let s = serde_json::to_vec(&s).unwrap();
+    
     let mut reader = RefReadBuffer::new(&s);
-    let mut buffer:[u8;1024 * 4] = [0;1024*4];
+    let mut buffer:[u8;1024 * 8] = [0;1024*8];
     let mut len = 0usize;
     {
         let mut writer = RefWriteBuffer::new(buffer.as_mut());
-        match encryptor.encrypt(&mut reader,&mut writer,false){
+        match encryptor.encrypt(&mut reader,&mut writer,true){
             Ok(_ )=>{
                 
             },
             Err(e)=>{
-                eprintln!("{:?}",e);
+                //eprintln!("{:?}",e);
                 return Err(());
             }
         }
         len = writer.position();
-        
+        //println!("pos:{}, remain:{}",writer.position(), writer.remaining());
     }
-    eprintln!("{:?}",len);
-    let r = base64::encode(&buffer[0..144]);
-    eprintln!("{:?}",r);
+    //eprintln!("{:?}",len);
+    let r = base64::encode(&buffer[0..len]);
+    //eprintln!("{:?}",r);
     return Ok(r);
 }
 fn check_sign(setting:&ServerSetting,request:&rouille::Request)->Result<SignInfomation, ()>{
@@ -155,7 +158,7 @@ fn check_sign(setting:&ServerSetting,request:&rouille::Request)->Result<SignInfo
         let mut len = 0usize;
         {
             let mut writer = RefWriteBuffer::new(buffer.as_mut());
-            match decryptor.decrypt(&mut reader,&mut writer,false){
+            match decryptor.decrypt(&mut reader,&mut writer,true){
                 Ok(v)=>{
                     
                 },
@@ -169,7 +172,8 @@ fn check_sign(setting:&ServerSetting,request:&rouille::Request)->Result<SignInfo
         let f:SignInfomation =match serde_json::from_slice(&buffer[0..len]){
             Ok(v)=>v,
             Err(e)=>{
-                eprintln!("{}",e);
+                //eprintln!("{}",String::from_utf8_lossy(&buffer[0..len]));
+                //eprintln!("{:?}",e);
                 return Err(());
             }
         };
@@ -433,7 +437,7 @@ fn main() {
                     if let Ok(s) = sign_in(setting, request,&u){
                         //let mut res:rouille::Response = response;
                         eprintln!("OK({})",s);
-                        return response.with_additional_header("Set-Cookie", s);
+                        return response.with_additional_header("Set-Cookie",format!("sign-signiture={}",s));
                     }
                 }
                 return response;
