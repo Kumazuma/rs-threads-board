@@ -294,51 +294,36 @@ fn main() {
                     password:String
                 }));
                 let user = model::User::new(0, input.nickname, input.email, Some(to_sha3(input.password.as_str())));
+                let response = 
                 match model.add_new_user(user){
-                    Ok( _ )=>{
-                        match check_accept_type(request){
-                            ResponseContentType::Html=>{
-                                //let mut s = Vec::new();
-                                //templates::redirection(&mut s,"/","회원가입이 완료되었습니다.").unwrap();
-                                //return rouille::Response::from_data("text/html;charset=utf-8", s);
-                            },
-                            ResponseContentType::Json=>{
-                                let res = ApiResponse{
-                                    code:0i32,
-                                    msg:String::from("가입이 완료되었습니다.")
-                                };
-                                let res = try_or_400!(serde_json::to_vec(&res));
-                                return rouille::Response::from_data("application/json", res);
-                            },
-                            ResponseContentType::Xml=>{
-
-                            }
-                        }
+                    Ok( _ )=>ApiResponse{
+                        code:0i32,
+                        msg:String::from("가입이 완료되었습니다.")
                     },
                     Err( e )=>match e{
-                        model::ModelError::CollapseInsertData(f)=>{
-                            
-                            match check_accept_type(request){
-                                ResponseContentType::Html=>{
-                                    
-                                },
-                                ResponseContentType::Json=>{
-                                    let res = ApiResponse{
-                                        code:-1i32,
-                                        msg:String::from("이미 가입된 이메일과 중복됩니다.")
-                                    };
-                                    let res = try_or_400!(serde_json::to_vec(&res));
-                                    return rouille::Response::from_data("application/json", res).with_status_code(400);
-                                },
-                                ResponseContentType::Xml=>{
-
-                                }
-                            }
+                        model::ModelError::CollapseInsertData(f)=>ApiResponse{
+                            code:-1i32,
+                            msg:String::from("이미 가입된 이메일과 중복됩니다.")
                         },
-                        _=>{}
+                        _=>ApiResponse{
+                            code:-1i32,
+                            msg:String::from("이미 가입된 이메일과 중복됩니다.")
+                        }
                     }
-                }
-                rouille::Response::text("회원 가입")
+                };
+                let code = if response.code == 0{200}else{400};
+                return match check_accept_type(request){
+                    ResponseContentType::Json=>{
+                        let v = try_or_400!(serde_json::to_vec(&response));
+                        rouille::Response::from_data("application/json", v).with_status_code(code)
+                    },
+                    ResponseContentType::Xml=>{
+                        let mut s = Vec::new();
+                        templates::xml_api_response(&mut s,response).unwrap();
+                        rouille::Response::from_data("application/xml", s).with_status_code(code)
+                    },
+                    ResponseContentType::Html=>rouille::Response::empty_404(),
+                };
             },
             (GET) (/users/{user_name:String})=>{
                 eprint!("{}",user_name);
