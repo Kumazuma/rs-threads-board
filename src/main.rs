@@ -5,6 +5,8 @@ extern crate serde_derive;
 extern crate serde;
 extern crate serde_json;
 extern crate chrono;
+extern crate base64;
+
 #[macro_use]
 extern crate mysql;
 extern crate crypto;
@@ -42,7 +44,8 @@ struct SignCheckResponse{
 #[derive(Serialize, Deserialize, Debug)]
 struct SignInfomation{
     email:String,
-    nickname:String
+    nickname:String,
+    user_agent:String
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ApiResponse{
@@ -98,9 +101,40 @@ fn check_accept_type(request:&rouille::Request)->ResponseContentType{
         _=>ResponseContentType::Html
     };
 }
-fn sign_in(setting:&ServerSetting, request:&rouille::Request)->Result<SignInfomation, ()>{
-    
-    return Err(());
+fn sign_in(setting:&ServerSetting, request:&rouille::Request, user:&model::User)->Result<String, ()>{
+
+    let s = SignInfomation{
+        email:user.get_email().to_string(),
+        nickname:user.get_nickname().to_string(),
+        user_agent:request.header("User-Agent").unwrap_or("").to_string()
+    };
+    use crypto::aes::*;
+    use crypto::blockmodes::*;
+    use crypto::buffer::*;
+    eprintln!("{} {}", setting.aes_key.as_bytes().len(), setting.aes_iv.as_bytes().len());
+    let mut encryptor = cbc_encryptor(KeySize::KeySize256, setting.aes_key.as_bytes(),setting.aes_iv.as_bytes(), PkcsPadding);
+    let s = serde_json::to_vec(&s).unwrap();
+    let mut reader = RefReadBuffer::new(&s);
+    let mut buffer:[u8;1024 * 4] = [0;1024*4];
+    let mut len = 0usize;
+    {
+        let mut writer = RefWriteBuffer::new(buffer.as_mut());
+        match encryptor.encrypt(&mut reader,&mut writer,false){
+            Ok(_ )=>{
+                
+            },
+            Err(e)=>{
+                eprintln!("{:?}",e);
+                return Err(());
+            }
+        }
+        len = writer.position();
+        
+    }
+    eprintln!("{:?}",len);
+    let r = base64::encode(&buffer[0..144]);
+    eprintln!("{:?}",r);
+    return Ok(r);
 }
 fn check_sign(setting:&ServerSetting,request:&rouille::Request)->Result<SignInfomation, ()>{
     if let Some((_, val)) = rouille::input::cookies(&request).find(|&(n, _)| n == "sign-signiture") {
@@ -108,8 +142,15 @@ fn check_sign(setting:&ServerSetting,request:&rouille::Request)->Result<SignInfo
         use crypto::aes::*;
         use crypto::blockmodes::*;
         use crypto::buffer::*;
-        let mut decryptor = cbc_decryptor(KeySize::KeySize128, setting.aes_key.as_bytes(),setting.aes_iv.as_bytes(), PkcsPadding);
-        let mut reader = RefReadBuffer::new(val.as_bytes());
+        let mut decryptor = cbc_decryptor(KeySize::KeySize256, setting.aes_key.as_bytes(),setting.aes_iv.as_bytes(), PkcsPadding);
+        let val = match base64::decode(val){
+            Ok(v)=>v,
+            Err(e)=>{
+                eprintln!("{}",e);
+                return Err(());
+            }
+        };
+        let mut reader = RefReadBuffer::new(&val);
         let mut buffer:[u8;1024 * 4] = [0;1024*4];
         let mut len = 0usize;
         {
@@ -358,7 +399,9 @@ fn main() {
                 eprintln!("{:?}",post);
                 let password = to_sha3(&post.password);
                 let email = post.email;
-                let response = match model.get_user(model::ConditionUserFind::ByEMail(email)){
+                let user = model.get_user(model::ConditionUserFind::ByEMail(email));
+                
+                let response = match user{
                     Some(ref u) if u.get_password() == password=>{
                         status_code= 200;
                         ApiResponse{
@@ -374,7 +417,7 @@ fn main() {
                         }
                     }
                 };
-                return match check_accept_type(request){
+                let mut response = match check_accept_type(request){
                     ResponseContentType::Json=>{
                         let v = try_or_400!(serde_json::to_vec(&response));
                         rouille::Response::from_data("application/json", v).with_status_code(status_code)
@@ -386,6 +429,14 @@ fn main() {
                     },
                     ResponseContentType::Html=>rouille::Response::empty_404(),
                 };
+                if let Some(u) = user{
+                    if let Ok(s) = sign_in(setting, request,&u){
+                        //let mut res:rouille::Response = response;
+                        eprintln!("OK({})",s);
+                        return response.with_additional_header("Set-Cookie", s);
+                    }
+                }
+                return response;
 			},
             (POST) (/logout)=>{
                 //eprint!("{}",user_name);
