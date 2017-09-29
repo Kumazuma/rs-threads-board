@@ -45,9 +45,9 @@ struct SignInfomation{
     nickname:String
 }
 #[derive(Serialize, Deserialize, Debug)]
-struct JsonResponse{
-    code:i32,
-    msg:String
+pub struct ApiResponse{
+    pub code:i32,
+    pub msg:String
 }
 fn to_sha3(text:&str)->String{
     use crypto::digest::Digest;
@@ -303,7 +303,7 @@ fn main() {
                                 //return rouille::Response::from_data("text/html;charset=utf-8", s);
                             },
                             ResponseContentType::Json=>{
-                                let res = JsonResponse{
+                                let res = ApiResponse{
                                     code:0i32,
                                     msg:String::from("가입이 완료되었습니다.")
                                 };
@@ -317,12 +317,13 @@ fn main() {
                     },
                     Err( e )=>match e{
                         model::ModelError::CollapseInsertData(f)=>{
+                            
                             match check_accept_type(request){
                                 ResponseContentType::Html=>{
                                     
                                 },
                                 ResponseContentType::Json=>{
-                                    let res = JsonResponse{
+                                    let res = ApiResponse{
                                         code:-1i32,
                                         msg:String::from("이미 가입된 이메일과 중복됩니다.")
                                     };
@@ -362,15 +363,49 @@ fn main() {
             (GET) (/login)=>{
                 rouille::Response::text("로그인 폼")
             },
-			(POST) (/users/{user_name:String}/login)=>{
-                eprint!("{}",user_name);
-                rouille::Response::text("로그인")
+			(POST) (/login)=>{
+                //eprint!("{}",user_name);
+                let status_code;
+                let post = try_or_400!(post_input!(request, {
+                    email: String,
+                    password: String,
+                }));
+                eprintln!("{:?}",post);
+                let password = to_sha3(&post.password);
+                let email = post.email;
+                let response = match model.get_user(model::ConditionUserFind::ByEMail(email)){
+                    Some(ref u) if u.get_password() == password=>{
+                        status_code= 200;
+                        ApiResponse{
+                            code:0,
+                            msg:String::from("로그인되었습니다.")
+                        }
+                    },
+                    _=>{
+                        status_code= 400;
+                        ApiResponse{
+                            code:1,
+                            msg:String::from("계정이 존재하지 않거나 비밀번호가 틀립니다.")
+                        }
+                    }
+                };
+                return match check_accept_type(request){
+                    ResponseContentType::Json=>{
+                        let v = try_or_400!(serde_json::to_vec(&response));
+                        rouille::Response::from_data("application/json", v).with_status_code(status_code)
+                    },
+                    ResponseContentType::Xml=>{
+                        let mut s = Vec::new();
+                        templates::xml_api_response(&mut s,response).unwrap();
+                        rouille::Response::from_data("application/xml", s).with_status_code(status_code)
+                    },
+                    ResponseContentType::Html=>rouille::Response::empty_404(),
+                };
 			},
-            (POST) (/users/{user_name:String}/logout)=>{
-                eprint!("{}",user_name);
+            (POST) (/logout)=>{
+                //eprint!("{}",user_name);
                 rouille::Response::text("로그아웃")
 			},
-			
 			(GET) (/css/{css:String}) =>{
 				let css_path = Path::new("./css").join(css);
 				//println!("{:?}",css_path.as_path());

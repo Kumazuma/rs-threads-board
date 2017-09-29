@@ -31,10 +31,10 @@
                         <li role="presentation"><a href="/threads">목록</a></li>
                         <li role="presentation"><a href="/tags">태그 목록</a></li>
                     </ul>
-                    <form id="sign-in-form" class="navbar-form navbar-right" role="sign-in">
+                    <form id="sign-in-form" action="/login" class="navbar-form navbar-right" role="sign-in">
                         <div class="form-group">
-                          <input type="text" class="form-control" placeholder="E-Mail">
-                          <input type="password" class="form-control" placeholder="password">
+                          <input type="text" class="form-control" placeholder="E-Mail" name="email">
+                          <input type="password" class="form-control" placeholder="password" name="password">
                         </div>
                         <button type="submit" class="btn btn-default">sign in</button>
                         <a href="/signup" class="btn btn-default">sign up</a>
