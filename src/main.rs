@@ -48,6 +48,11 @@ struct SignInfomation{
     user_agent:String
 }
 #[derive(Serialize, Deserialize, Debug)]
+pub struct LoginCheck{
+    email:String,
+    nickname:String
+}
+#[derive(Serialize, Deserialize, Debug)]
 pub struct ApiResponse{
     pub code:i32,
     pub msg:String
@@ -158,30 +163,16 @@ fn check_sign(setting:&ServerSetting,request:&rouille::Request)->Result<SignInfo
         let mut len = 0usize;
         {
             let mut writer = RefWriteBuffer::new(buffer.as_mut());
-            match decryptor.decrypt(&mut reader,&mut writer,true){
-                Ok(v)=>{
-                    
-                },
-                Err(e)=>{
-                    return Err(());
-                }
+            if let Err(e) = decryptor.decrypt(&mut reader,&mut writer,true){
+                return Err(());
             }
             len = writer.position();
         }
-        
-        let f:SignInfomation =match serde_json::from_slice(&buffer[0..len]){
-            Ok(v)=>v,
-            Err(e)=>{
-                //eprintln!("{}",String::from_utf8_lossy(&buffer[0..len]));
-                //eprintln!("{:?}",e);
-                return Err(());
-            }
-        };
-        return Err(());
+        if let Ok(v) = serde_json::from_slice(&buffer[0..len]){
+            return Ok(v);
+        }
     }
-    else{
-        return Err(());
-    }
+    return Err(());
 }
 fn main() {
     
@@ -205,7 +196,8 @@ fn main() {
 
 	println!("Now listening on localhost:9999");
 	// The `start_server` starts listening forever on the given address.
-	let server = Server::new("127.0.0.1:9999", move |request| {
+	let server = Server::new("0.0.0.0:9999", move |request| {
+        //eprintln!("{:?}", request);
         let setting:*const _ = &setting;
         let setting:&ServerSetting = unsafe{
             std::mem::transmute::<_, _>(setting)
@@ -214,18 +206,6 @@ fn main() {
         let mut model = try_or_400!(pool.get_conn());
 		router!(request,
             (GET) (/)=>{
-                /*
-                if let Some(res_type) = check_accept_type(request){
-                    let mut s = Vec::new();
-                    templates::default(&mut s).unwrap();
-                    rouille::Response::from_data("text/html;charset=utf-8", s)
-                }
-                else{
-                    let mut s = Vec::new();
-                    templates::default(&mut s).unwrap();
-                    rouille::Response::from_data("text/html;charset=utf-8", s)
-                }
-                */
                 let offset:usize = match request.get_param("offset").unwrap_or(String::from("0")).parse(){
                     Ok(v)=>v,
                     Err( _ )=>0usize
@@ -278,8 +258,22 @@ fn main() {
                     Err( _ )=>25usize
                 };
                 let list = model.get_threads_list(offset,count);
-                let v = try_or_400!(serde_json::to_vec(&list));
-                rouille::Response::from_data("application/json", v)
+                return match check_accept_type(request){
+                    ResponseContentType::Json=>{
+                        let v = try_or_400!(serde_json::to_vec(&list));
+                        rouille::Response::from_data("application/json", v)
+                    },
+                    ResponseContentType::Html=>{
+                        let mut s = Vec::new();
+                        templates::default(&mut s,list).unwrap();
+                        rouille::Response::from_data("text/html;charset=utf-8", s)
+                    },
+                    ResponseContentType::Xml=>{
+                        let mut s = Vec::new();
+                        templates::xml_threads_list(&mut s,list).unwrap();
+                        rouille::Response::from_data("application/xml", s)
+                    }
+                };
             },
             (POST) (/threads)=>{
                 rouille::Response::text("스레드 생성")
@@ -377,7 +371,7 @@ fn main() {
             (GET) (/signin/check)=>{
                 match check_sign(setting,request){
                     Ok(v)=>{
-
+                        
                     },
                     Err(())=>{
 
@@ -395,7 +389,6 @@ fn main() {
             },
 			(POST) (/login)=>{
                 //eprint!("{}",user_name);
-                let status_code;
                 let post = try_or_400!(post_input!(request, {
                     email: String,
                     password: String,
@@ -405,21 +398,19 @@ fn main() {
                 let email = post.email;
                 let user = model.get_user(model::ConditionUserFind::ByEMail(email));
                 
-                let response = match user{
-                    Some(ref u) if u.get_password() == password=>{
-                        status_code= 200;
+                let (status_code, response) = match user{
+                    Some(ref u) if u.get_password() == password=>
+                        (200,
                         ApiResponse{
                             code:0,
                             msg:String::from("로그인되었습니다.")
-                        }
-                    },
-                    _=>{
-                        status_code= 400;
+                        }),
+                    _=>(400,
                         ApiResponse{
                             code:1,
                             msg:String::from("계정이 존재하지 않거나 비밀번호가 틀립니다.")
                         }
-                    }
+                    )
                 };
                 let mut response = match check_accept_type(request){
                     ResponseContentType::Json=>{
