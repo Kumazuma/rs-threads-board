@@ -37,15 +37,15 @@ enum ResponseContentType{
     Xml
 }
 #[derive(Serialize, Deserialize, Debug)]
-struct SignCheckResponse{
-    is_signin:bool,
-    sign:Option<SignInfomation>
+pub struct SignCheckResponse{
+    pub is_signin:bool,
+    pub sign:Option<SignInfomation>
 }
 #[derive(Serialize, Deserialize, Debug)]
-struct SignInfomation{
-    email:String,
-    nickname:String,
-    user_agent:String
+pub struct SignInfomation{
+    pub email:String,
+    pub nickname:String,
+    pub user_agent:String
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct LoginCheck{
@@ -369,15 +369,22 @@ fn main() {
                 rouille::Response::text("회원 정보")
             },
             (GET) (/signin/check)=>{
-                match check_sign(setting,request){
-                    Ok(v)=>{
-                        
+                let (states_code, res) = match check_sign(setting,request){
+                    Ok(v)=>(200, SignCheckResponse{is_signin:true, sign:Some(v)}),
+                    Err(())=>(400, SignCheckResponse{is_signin:true, sign:None})
+                };
+                return match check_accept_type(request){
+                    ResponseContentType::Json=>{
+                        let v = try_or_400!(serde_json::to_vec(&res));
+                        rouille::Response::from_data("application/json", v).with_status_code(states_code)
                     },
-                    Err(())=>{
-
-                    }
-                }
-                rouille::Response::text("로그아웃")
+                    ResponseContentType::Xml=>{
+                        let mut s = Vec::new();
+                        templates::xml_signcheck(&mut s,res).unwrap();
+                        rouille::Response::from_data("application/xml", s).with_status_code(states_code)
+                    },
+                    ResponseContentType::Html=>rouille::Response::empty_404(),
+                };
                 
             },
             (PUT) (/users/{user_name:String})=>{
