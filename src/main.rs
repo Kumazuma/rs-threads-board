@@ -47,7 +47,7 @@ impl LoginResponse for LoginFailed {
             ResponseContentType::Html|ResponseContentType::Xml=>rouille::Response::html(""),
             ResponseContentType::Json=>{
                 let v = try_or_400!(serde_json::to_vec(self));
-                rouille::Response::from_data("application/json", v)
+                rouille::Response::from_data("application/json", v).with_status_code(400)
             }
         }
     }
