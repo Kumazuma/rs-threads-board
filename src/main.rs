@@ -6,7 +6,6 @@ extern crate serde;
 extern crate serde_json;
 extern crate chrono;
 extern crate base64;
-
 #[macro_use]
 extern crate mysql;
 extern crate crypto;
@@ -22,12 +21,18 @@ mod model;
 mod db_conn;
 use db_conn::*;
 use model::Model;
-pub trait LoginCheckProcedure{
+pub trait LoginResponse{
     fn get_response(&self, request:&rouille::Request)->rouille::Response;
 }
 #[derive(Serialize, Deserialize, Debug)]
+enum LoginFailedReason{
+    ThereIsNoAccount,
+    IncorrectPassword,
+    InvalidParameter
+}
+#[derive(Serialize, Deserialize, Debug)]
 struct LoginFailed{
-    code:i32
+    code:LoginFailedReason
 }
 #[derive(Serialize, Deserialize, Debug)]
 struct LoginSuccess{
@@ -35,28 +40,26 @@ struct LoginSuccess{
     gravatar:String,
     nickname:String
 }
-impl LoginCheckProcedure for LoginFailed {
+impl LoginResponse for LoginFailed {
     // add code here
     fn get_response(&self, request:&rouille::Request)->rouille::Response{
         match check_accept_type(request){
-            ResponseContentType::Html|ResponseContentType::Xml=>{
-                rouille::Response::html("")
-            },
+            ResponseContentType::Html|ResponseContentType::Xml=>rouille::Response::html(""),
             ResponseContentType::Json=>{
-                rouille::Response::html("")
+                let v = try_or_400!(serde_json::to_vec(self));
+                rouille::Response::from_data("application/json", v)
             }
         }
     }
 }
-impl LoginCheckProcedure for LoginSuccess {
+impl LoginResponse for LoginSuccess {
     // add code here
     fn get_response(&self, request:&rouille::Request)->rouille::Response{
         match check_accept_type(request){
-            ResponseContentType::Html|ResponseContentType::Xml=>{
-                rouille::Response::html("")
-            },
+            ResponseContentType::Html|ResponseContentType::Xml=>rouille::Response::html(""),
             ResponseContentType::Json=>{
-                rouille::Response::html("")
+                let v = try_or_400!(serde_json::to_vec(self));
+                rouille::Response::from_data("application/json", v)
             }
         }
     }
@@ -79,20 +82,10 @@ enum ResponseContentType{
     Xml
 }
 #[derive(Serialize, Deserialize, Debug)]
-pub struct SignCheckResponse{
-    pub is_signin:bool,
-    pub sign:Option<SignInfomation>
-}
-#[derive(Serialize, Deserialize, Debug)]
 pub struct SignInfomation{
     pub email:String,
     pub nickname:String,
     pub user_agent:String
-}
-#[derive(Serialize, Deserialize, Debug)]
-pub struct LoginCheck{
-    email:String,
-    nickname:String
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ApiResponse{
@@ -148,13 +141,37 @@ fn check_accept_type(request:&rouille::Request)->ResponseContentType{
         _=>ResponseContentType::Html
     };
 }
-fn sign_in(setting:&ServerSetting, request:&rouille::Request, user:&model::User)->Result<Box<LoginCheckProcedure>, ()>{
+fn sign_in(setting:&ServerSetting, request:&rouille::Request, model:&mut model::Model)->Box<LoginResponse>{
+    let post = match post_input!(request, {email: String,password: String,}){
+        Ok(v)=>v,
+        Err( _ )=>{
+            return Box::new(LoginFailed{
+                code:LoginFailedReason::InvalidParameter
+            });
+        }
+    };
+    let password = to_sha3(&post.password);
+    let email = post.email;
+    let user = match  model.get_user(model::ConditionUserFind::ByEMail(email)){
+        Some(v)=>v,
+        Noen=>{
+            return Box::new(LoginFailed{
+                code:LoginFailedReason::ThereIsNoAccount
+            });
+        }
+    };
+    if user.get_password() != password{
+        return Box::new(LoginFailed{
+            code:LoginFailedReason::IncorrectPassword
+        });
+    }
 
     let s = SignInfomation{
         email:user.get_email().to_string(),
         nickname:user.get_nickname().to_string(),
         user_agent:request.header("User-Agent").unwrap_or("").to_string()
     };
+    
     use crypto::aes::*;
     use crypto::blockmodes::*;
     use crypto::buffer::*;
@@ -166,22 +183,18 @@ fn sign_in(setting:&ServerSetting, request:&rouille::Request, user:&model::User)
     let mut len = 0usize;
     {
         let mut writer = RefWriteBuffer::new(buffer.as_mut());
-        match encryptor.encrypt(&mut reader,&mut writer,true){
-            Ok(_ )=>{
-                
-            },
-            Err(e)=>{
-                //eprintln!("{:?}",e);
-                return Err(());
-            }
-        }
+        encryptor.encrypt(&mut reader,&mut writer,true).unwrap();
         len = writer.position();
         //println!("pos:{}, remain:{}",writer.position(), writer.remaining());
     }
     //eprintln!("{:?}",len);
     let r = base64::encode(&buffer[0..len]);
     //eprintln!("{:?}",r);
-    return Err(());
+    return Box::new(LoginSuccess{
+        nickname:String::from(user.get_nickname()),
+        token:r,
+        gravatar:user.get_gravatar_url()
+    });
 }
 fn check_sign(setting:&ServerSetting,request:&rouille::Request)->Result<SignInfomation, ()>{
     if let Some((_, val)) = rouille::input::cookies(&request).find(|&(n, _)| n == "sign-signiture") {
@@ -406,25 +419,6 @@ fn main() {
                 eprint!("{}",user_name);
                 rouille::Response::text("회원 정보")
             },
-            (GET) (/signin/check)=>{
-                let (states_code, res) = match check_sign(setting,request){
-                    Ok(v)=>(200, SignCheckResponse{is_signin:true, sign:Some(v)}),
-                    Err(())=>(400, SignCheckResponse{is_signin:true, sign:None})
-                };
-                return match check_accept_type(request){
-                    ResponseContentType::Json=>{
-                        let v = try_or_400!(serde_json::to_vec(&res));
-                        rouille::Response::from_data("application/json", v).with_status_code(states_code)
-                    },
-                    ResponseContentType::Xml=>{
-                        let mut s = Vec::new();
-                        templates::xml_signcheck(&mut s,res).unwrap();
-                        rouille::Response::from_data("application/xml", s).with_status_code(states_code)
-                    },
-                    ResponseContentType::Html=>rouille::Response::empty_404(),
-                };
-                
-            },
             (PUT) (/users/{user_name:String})=>{
                 eprint!("{}",user_name);
                 rouille::Response::text("회원정보 수정")
@@ -433,51 +427,8 @@ fn main() {
                 rouille::Response::text("로그인 폼")
             },
 			(POST) (/login)=>{
-                //eprint!("{}",user_name);
-                let post = try_or_400!(post_input!(request, {
-                    email: String,
-                    password: String,
-                }));
-                eprintln!("{:?}",post);
-                let password = to_sha3(&post.password);
-                let email = post.email;
-                let user = model.get_user(model::ConditionUserFind::ByEMail(email));
-                
-                let (status_code, response) = match user{
-                    Some(ref u) if u.get_password() == password=>
-                        (200,
-                        ApiResponse{
-                            code:0,
-                            msg:String::from("로그인되었습니다.")
-                        }),
-                    _=>(400,
-                        ApiResponse{
-                            code:1,
-                            msg:String::from("계정이 존재하지 않거나 비밀번호가 틀립니다.")
-                        }
-                    )
-                };
-                let mut response = match check_accept_type(request){
-                    ResponseContentType::Json=>{
-                        let v = try_or_400!(serde_json::to_vec(&response));
-                        rouille::Response::from_data("application/json", v).with_status_code(status_code)
-                    },
-                    ResponseContentType::Xml=>{
-                        let mut s = Vec::new();
-                        templates::xml_api_response(&mut s,response).unwrap();
-                        rouille::Response::from_data("application/xml", s).with_status_code(status_code)
-                    },
-                    ResponseContentType::Html=>rouille::Response::empty_404(),
-                };
-                if let Some(u) = user{
-                    if let Ok(s) = sign_in(setting, request,&u){
-                        //let mut res:rouille::Response = response;
-                        //eprintln!("OK({})",s);
-                        return response;
-                    }
-                }
-                return response;
-			},
+                sign_in(setting, request,&mut model).get_response(&request)
+            },
             (POST) (/logout)=>{
                 //eprint!("{}",user_name);
                 rouille::Response::text("로그아웃")
