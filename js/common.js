@@ -35,7 +35,7 @@ $(document).ready(()=>{
             document.cookie = "gravatar=" + e.gravatar;
             checkSignin();
         }).fail(( jqXHR, textStatus )=>{
-            
+             
             let json_res = jqXHR.responseJSON;
             switch(json_res.code){
                 case "ThereIsNotAccount":
