@@ -22,6 +22,48 @@ mod model;
 mod db_conn;
 use db_conn::*;
 use model::Model;
+pub trait LoginCheckProcedure{
+    fn get_response(&self, request:&rouille::Request)->rouille::Response;
+}
+#[derive(Serialize, Deserialize, Debug)]
+struct LoginFailed{
+    code:i32
+}
+#[derive(Serialize, Deserialize, Debug)]
+struct LoginSuccess{
+    token:String,
+    gravatar:String,
+    nickname:String
+}
+impl LoginCheckProcedure for LoginFailed {
+    // add code here
+    fn get_response(&self, request:&rouille::Request)->rouille::Response{
+        match check_accept_type(request){
+            ResponseContentType::Html|ResponseContentType::Xml=>{
+                rouille::Response::html("")
+            },
+            ResponseContentType::Json=>{
+                rouille::Response::html("")
+            }
+        }
+    }
+}
+impl LoginCheckProcedure for LoginSuccess {
+    // add code here
+    fn get_response(&self, request:&rouille::Request)->rouille::Response{
+        match check_accept_type(request){
+            ResponseContentType::Html|ResponseContentType::Xml=>{
+                rouille::Response::html("")
+            },
+            ResponseContentType::Json=>{
+                rouille::Response::html("")
+            }
+        }
+    }
+}
+
+
+
 #[derive(Serialize, Deserialize, Debug)]
 struct ServerSetting{
 	host:String,
@@ -106,20 +148,17 @@ fn check_accept_type(request:&rouille::Request)->ResponseContentType{
         _=>ResponseContentType::Html
     };
 }
-fn sign_in(setting:&ServerSetting, request:&rouille::Request, user:&model::User)->Result<String, ()>{
+fn sign_in(setting:&ServerSetting, request:&rouille::Request, user:&model::User)->Result<Box<LoginCheckProcedure>, ()>{
 
     let s = SignInfomation{
         email:user.get_email().to_string(),
         nickname:user.get_nickname().to_string(),
         user_agent:request.header("User-Agent").unwrap_or("").to_string()
     };
-    println!("{}", s.user_agent);
     use crypto::aes::*;
     use crypto::blockmodes::*;
     use crypto::buffer::*;
-    eprintln!("{} {}", setting.aes_key.as_bytes().len(), setting.aes_iv.as_bytes().len());
     let mut encryptor = cbc_encryptor(KeySize::KeySize256, setting.aes_key.as_bytes(),setting.aes_iv.as_bytes(), PkcsPadding);
-    eprintln!("{}", serde_json::to_string(&s).unwrap());
     let s = serde_json::to_vec(&s).unwrap();
     
     let mut reader = RefReadBuffer::new(&s);
@@ -142,7 +181,7 @@ fn sign_in(setting:&ServerSetting, request:&rouille::Request, user:&model::User)
     //eprintln!("{:?}",len);
     let r = base64::encode(&buffer[0..len]);
     //eprintln!("{:?}",r);
-    return Ok(r);
+    return Err(());
 }
 fn check_sign(setting:&ServerSetting,request:&rouille::Request)->Result<SignInfomation, ()>{
     if let Some((_, val)) = rouille::input::cookies(&request).find(|&(n, _)| n == "sign-signiture") {
@@ -246,7 +285,6 @@ fn main() {
                         rouille::Response::from_data("application/xml", s)
                     }
                 };
-                
             },
             (GET) (/threads/)=>{
                 let offset:usize = match request.get_param("offset").unwrap_or(String::from("0")).parse(){
@@ -434,8 +472,8 @@ fn main() {
                 if let Some(u) = user{
                     if let Ok(s) = sign_in(setting, request,&u){
                         //let mut res:rouille::Response = response;
-                        eprintln!("OK({})",s);
-                        return response.with_additional_header("Set-Cookie",format!("sign-signiture={}",s));
+                        //eprintln!("OK({})",s);
+                        return response;
                     }
                 }
                 return response;
