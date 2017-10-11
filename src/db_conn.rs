@@ -60,5 +60,35 @@ impl Model for mysql::PooledConn {
         }
         return Ok(());
     }
+    fn get_thread(&mut self, thread_uid:i32)->Option<ThreadBody>{
+        let sql =format!("SELECT * FROM v_thread_list WHERE uid = ? LIMIT 1");
+        let params:&[&ToValue] = &[&thread_uid];
+        let mut thread = match self.first_exec(sql, params).unwrap(){
+            Some(v)=>v,
+            None=>return None
+        };
+        let sql ="SELECT * FROM v_comments WHERE thread_uid = ?";
+        let comments:Vec< _ >  = self.prep_exec(sql,params).unwrap().map(|row|{
+            let mut row = row.unwrap();
+            Comment::new(
+                row.take("uid").expect("uid"),
+                User::new(
+                    row.take("user_uid").expect("user_uid"),
+                    row.take("user_nickname").expect("user_nickname"),
+                    row.take("user_email").expect("user_email"),
+                    None
+                ),
+                row.take("recent_update").expect("recent_update"),
+                row.take("comment").expect("comment")
+            )
+        }).collect();
+        let res = ThreadBody::new(
+            thread_uid,
+            thread.take("subject").expect("uid"),
+            thread.take("created_datetime").expect("created_datetime"),
+            comments
+        );
+        return Some(res);
+    }
     // add code here
 }

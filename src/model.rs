@@ -21,6 +21,41 @@ pub trait Model{
      fn get_threads_list(&mut self,offset:usize, count:usize)->Vec<Thread>;
      fn get_user(&mut self,condition:ConditionUserFind)->Option<User>;
      fn add_new_user(&mut self, user:User)->Result<(), ModelError>;
+     fn get_thread(&mut self, thread_uid:i32)->Option<ThreadBody>;
+}
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Comment{
+    uid:i32,
+    user:User,
+    write_datetime:NaiveDateTime,
+    content:String
+}
+impl Comment{
+    pub fn new(uid:i32, user:User, write_datetime:NaiveDateTime, content:String)->Comment{
+        Comment{
+            uid:uid,
+            user:user,
+            write_datetime:write_datetime,
+            content:content
+        }
+    }
+}
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ThreadBody{
+    uid:i32,
+    subject:String,
+    open_datetime:NaiveDateTime,
+    comments:Vec<Comment>
+}
+ impl ThreadBody{
+    pub fn new(uid:i32, subject:String, open_datetime:NaiveDateTime, comments:Vec<Comment>)->ThreadBody{
+        ThreadBody{
+            uid:uid,
+            subject:subject,
+            open_datetime:open_datetime,
+            comments:comments
+        }
+    }
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Thread{
