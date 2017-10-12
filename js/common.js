@@ -6,7 +6,6 @@ function checkSignin(){
         $("#sign-in-form").css("display","none");
         $("#user-info").css("display","");
         $("#user-gravatar").attr("src",gravatar.replace("s=24","s=34"));
-        
     }
 }
 function signout(){
@@ -34,8 +33,7 @@ $(document).ready(()=>{
             document.cookie = "token=" + e.token;
             document.cookie = "gravatar=" + e.gravatar;
             checkSignin();
-        }).fail(( jqXHR, textStatus )=>{
-             
+        }).fail(( jqXHR, textStatus )=>{   
             let json_res = jqXHR.responseJSON;
             switch(json_res.code){
                 case "ThereIsNotAccount":
@@ -49,6 +47,20 @@ $(document).ready(()=>{
                 break;
             }
         });
+        e.preventDefault();
+    });
+    $("#comment-write-form").on("submit",(e)=>{
+        var nickname = document.cookie.replace(/(?:(?:^|.*;\s*)nickname\s*\=\s*([^;]*).*$)|^.*$/, "$1");
+        var token = document.cookie.replace(/(?:(?:^|.*;\s*)token\s*\=\s*([^;]*).*$)|^.*$/, "$1");
+        var gravatar = document.cookie.replace(/(?:(?:^|.*;\s*)gravatar\s*\=\s*([^;]*).*$)|^.*$/, "$1");
+        if(token == ""){
+            alert("로그인하지 않았습니다. 로그인을 하시기 바랍니다.");
+        }
+        else{
+            let parameter = {
+                
+            };
+        }
         e.preventDefault();
     });
 });

@@ -89,3 +89,12 @@ ul.thread-list span.created-datetime{
 .has-error .error-msg{
     visibility: visible;
 }
+article .media{
+    border-bottom: 1px dotted #333;
+}
+body{
+    background-color: #f5f5f5
+}
+section{
+    background-color: #FFF;
+}

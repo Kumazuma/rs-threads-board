@@ -378,7 +378,7 @@ fn main() {
                 eprint!("{}",id);
                 rouille::Response::text("스레드 코멘트 로드")
             },
-            (POST) (/threads/{id:String}/comments)=>{
+            (POST) (/threads/{id:i32}/comments)=>{
                 eprint!("{}",id);
                 rouille::Response::text("스레드 코멘트 추가")
             },
