@@ -1,6 +1,6 @@
 @* A very simple template with no arguments.  This line is a comment. *@
-@use model::Thread;
-@(list:Vec<Thread>)
+@use model::ThreadBody;
+@(thread:&ThreadBody)
 <!DOCTYPE html>
 <html lang="ko">
     <head>
@@ -30,53 +30,58 @@
                     <ul id="menu" class="nav navbar-nav">
                         <li role="presentation"><a href="/threads">목록</a></li>
                         <li role="presentation"><a href="/tags">태그 목록</a></li>
+                        <li role="presentation"><a href="/threads/write">스레드 생성</a></li>
                     </ul>
                     <form id="sign-in-form" action="/login" class="navbar-form navbar-right" role="sign-in">
                         <div class="form-group">
-                          <input type="text" class="form-control" placeholder="E-Mail" name="email">
-                          <input type="password" class="form-control" placeholder="password" name="password">
+                            <input type="text" class="form-control" placeholder="E-Mail" name="email">
+                            <input type="password" class="form-control" placeholder="password" name="password">
                         </div>
                         <button type="submit" class="btn btn-default">sign in</button>
                         <a href="/signup" class="btn btn-default">sign up</a>
                     </form>
-                    
-                    <ul style="display:none;" id="user-info" class="nav navbar-nav navbar-right navbar-form">
-                        <li><img id="user-gravatar"></li>
-                        <li><button id="btn-signout" class="btn btn-default">sign out</button></li>
-                    </ul>
+                    <div id="user-info" style="display: none;" class="navbar-right navbar-form">
+                        <img id="user-gravatar"><button id="btn-signout" class="btn btn-default">sign out</button>
+                    </div>
                 </div>
             </div>
         </nav>
-        <div class="container">
-@if list.len() == 0{
-            <span>스레드가 없습니다. 새로운 스레드를 생성해 보세요</span>
-}
-else{
-            <table id="thread-list" class="table table-striped table-hover">
-                <thead>
-                    <tr>
-                        <th>주제</th>
-                        <th>개시자</th>
-                        <th>마지막 갱신</th>
-                    </tr>
-                </thead>
-                <tbody>
-@for item in list{
-                    <tr>
-                        <td><a href="/threads/@item.get_uid()">@item.get_subject()</a></td>
-                        <td>
-                            <span class="user">
-                                <img src="@item.get_opener().get_gravatar_url()" class="user-gravta">
-                                <span>@item.get_opener().get_nickname()</span>
-                                <input type="hidden" value="@item.get_opener().get_uid()">
-                            </span>
-                        </td>
-                        <td>@item.get_recent_update_datetime()</td>
-                    </tr>
-    }
-}
-                </tbody>
-            </table>
-        </div>
+        <section class="container">
+            <header>
+                <h1>@thread.get_subject()</h1>
+                <span>
+                    @thread.get_open_datetime() 에 열림
+                </span>
+            </header>
+            <article>
+                @for comment in thread.get_comments(){
+                <div class="media">
+                    <div class="media-left media-middle">
+                        <img class="media-object" src="@comment.get_user().get_gravatar_url(Some(64))">
+                        <span>@comment.get_user().get_nickname()</span>
+                    </div>
+                    <div class="media-body">
+                        @comment.get_content()
+                    </div>
+                </div>
+                }
+            </article>
+            <footer>
+                <div class="media" id="comment-write-area">
+                    <div class="media-left media-middle">
+                        <img  id="comment-writer-gravatar" class="media-object" src="">
+                        <span id="comment-writer"></span>
+                    </div>
+                    <div class="media-body">
+                        <form>
+                            <div class="form-group">
+                            <textarea class="form-control"></textarea>   
+                            
+                            <input class="btn btn-default" type="submit" value="comment">
+                        </form>
+                    </div>
+                </div>
+            </footer>
+        </section>
     </body>
 </html>

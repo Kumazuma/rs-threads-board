@@ -78,7 +78,7 @@ impl Model for mysql::PooledConn {
                     row.take("user_email").expect("user_email"),
                     None
                 ),
-                row.take("recent_update").expect("recent_update"),
+                row.take("write_datetime").expect("write_datetime"),
                 row.take("comment").expect("comment")
             )
         }).collect();

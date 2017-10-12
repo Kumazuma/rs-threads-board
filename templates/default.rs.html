@@ -65,7 +65,7 @@ else{
                         <td><a href="/threads/@item.get_uid()">@item.get_subject()</a></td>
                         <td>
                             <span class="user">
-                                <img src="@item.get_opener().get_gravatar_url()" class="user-gravta">
+                                <img src="@item.get_opener().get_gravatar_url(Some(24))" class="user-gravta">
                                 <span>@item.get_opener().get_nickname()</span>
                                 <input type="hidden" value="@item.get_opener().get_uid()">
                             </span>

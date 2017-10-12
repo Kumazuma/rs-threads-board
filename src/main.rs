@@ -21,7 +21,7 @@ mod model;
 mod db_conn;
 use db_conn::*;
 use model::Model;
-pub trait LoginResponse{
+pub trait Response{
     fn get_response(&self, request:&rouille::Request)->rouille::Response;
 }
 #[derive(Serialize, Deserialize, Debug)]
@@ -40,7 +40,7 @@ struct LoginSuccess{
     gravatar:String,
     nickname:String
 }
-impl LoginResponse for LoginFailed {
+impl Response for LoginFailed {
     // add code here
     fn get_response(&self, request:&rouille::Request)->rouille::Response{
         match check_accept_type(request){
@@ -52,7 +52,7 @@ impl LoginResponse for LoginFailed {
         }
     }
 }
-impl LoginResponse for LoginSuccess {
+impl Response for LoginSuccess {
     // add code here
     fn get_response(&self, request:&rouille::Request)->rouille::Response{
         match check_accept_type(request){
@@ -64,6 +64,36 @@ impl LoginResponse for LoginSuccess {
         }
     }
 }
+struct ThreadView{
+    body:model::ThreadBody
+}
+struct ThreadVuewError{
+
+}
+impl Response for ThreadView {
+    // add code here
+    fn get_response(&self, request:&rouille::Request)->rouille::Response{
+        match check_accept_type(request){
+            ResponseContentType::Html=>{
+                let mut s = Vec::with_capacity(1024 * 1024);
+                templates::thread_view(&mut s,&self.body).unwrap();
+                rouille::Response::from_data("text/html;charset=utf-8", s)
+            },
+            ResponseContentType::Xml=>rouille::Response::html(""),
+            ResponseContentType::Json=>{
+                let v = try_or_400!(serde_json::to_vec(&self.body));
+                rouille::Response::from_data("application/json", v)
+            }
+        }
+    }
+}
+impl Response for ThreadVuewError{
+    fn get_response(&self, request:&rouille::Request)->rouille::Response{
+        return rouille::Response::html("");
+    }
+}
+
+
 
 
 
@@ -141,7 +171,7 @@ fn check_accept_type(request:&rouille::Request)->ResponseContentType{
         _=>ResponseContentType::Html
     };
 }
-fn sign_in(setting:&ServerSetting, request:&rouille::Request, model:&mut model::Model)->Box<LoginResponse>{
+fn sign_in(setting:&ServerSetting, request:&rouille::Request, model:&mut model::Model)->Box<Response>{
     let post = match post_input!(request, {email: String,password: String,}){
         Ok(v)=>v,
         Err( _ )=>{
@@ -193,7 +223,7 @@ fn sign_in(setting:&ServerSetting, request:&rouille::Request, model:&mut model::
     return Box::new(LoginSuccess{
         nickname:String::from(user.get_nickname()),
         token:r,
-        gravatar:user.get_gravatar_url()
+        gravatar:user.get_gravatar_url(Some(34))
     });
 }
 fn check_sign(setting:&ServerSetting,request:&rouille::Request)->Result<SignInfomation, ()>{
@@ -226,6 +256,7 @@ fn check_sign(setting:&ServerSetting,request:&rouille::Request)->Result<SignInfo
     }
     return Err(());
 }
+
 fn main() {
     
     let setting:ServerSetting;
@@ -329,9 +360,15 @@ fn main() {
             (POST) (/threads)=>{
                 rouille::Response::text("스레드 생성")
             },
-            (GET) (/threads/{id:String})=>{
-                eprint!("{}",id);
-                rouille::Response::text("스레드 뷰")
+            (GET) (/threads/{id:i32})=>{
+                let response:Box<Response>;
+                if let Some(t) = model.get_thread(id){
+                    response = Box::new(ThreadView{body:t});
+                }
+                else{
+                    response = Box::new(ThreadVuewError{});
+                }
+                response.get_response(request)
             },
             (DELETE) (/threads/{id:String})=>{
                 eprint!("{}",id);

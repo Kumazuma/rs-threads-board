@@ -39,6 +39,18 @@ impl Comment{
             content:content
         }
     }
+    pub fn get_uid(&self)->i32{
+        return self.uid;
+    }
+    pub fn get_user(&self)->&User{
+        return &self.user;
+    }
+    pub fn get_writed_datetime(&self)->&NaiveDateTime{
+        return &self.write_datetime;
+    }
+    pub fn get_content(&self)->&String{
+        return &self.content;
+    }
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ThreadBody{
@@ -55,6 +67,15 @@ pub struct ThreadBody{
             open_datetime:open_datetime,
             comments:comments
         }
+    }
+    pub fn get_subject(&self)->&String{
+        &self.subject
+    }
+    pub fn get_open_datetime(&self)->&NaiveDateTime{
+        &self.open_datetime
+    }
+    pub fn get_comments(&self)->&Vec<Comment>{
+        &self.comments
     }
 }
 #[derive(Serialize, Deserialize, Debug)]
@@ -116,9 +137,14 @@ impl User {
     pub fn get_password(&self)->&str{
         self.password.as_str()
     }
-    pub fn get_gravatar_url(&self)->String{
+    pub fn get_gravatar_url(&self, size:Option<u32>)->String{
         let mut md5 = crypto::md5::Md5::new();
         md5.input_str(self.email.as_str());
-        format!("https://www.gravatar.com/avatar/{}?s=24", md5.result_str())
+        if let None = size{
+            return format!("https://www.gravatar.com/avatar/{}", md5.result_str());
+        }
+        else{
+            return format!("https://www.gravatar.com/avatar/{}?s={}", md5.result_str(), size.unwrap());
+        }
     }
 }
