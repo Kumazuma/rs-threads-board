@@ -9,17 +9,12 @@ extern crate base64;
 #[macro_use]
 extern crate mysql;
 extern crate crypto;
-use templates::*;
-use std::path::{Path, PathBuf};
+use std::path::{Path};
 use std::fs::File;
-use std::io::Read;
 use rouille::Server;
 use std::time::Duration;
-use std::io;
-use std::io::prelude::*;
 mod model;
 mod db_conn;
-use db_conn::*;
 use model::Model;
 pub trait Response{
     fn get_response(&self, request:&rouille::Request)->rouille::Response;
@@ -88,7 +83,7 @@ impl Response for ThreadView {
     }
 }
 impl Response for ThreadVuewError{
-    fn get_response(&self, request:&rouille::Request)->rouille::Response{
+    fn get_response(&self, _:&rouille::Request)->rouille::Response{
         return rouille::Response::html("");
     }
 }
@@ -184,7 +179,7 @@ fn sign_in(setting:&ServerSetting, request:&rouille::Request, model:&mut model::
     let email = post.email;
     let user = match  model.get_user(model::ConditionUserFind::ByEMail(email)){
         Some(v)=>v,
-        Noen=>{
+        None=>{
             return Box::new(LoginFailed{
                 code:LoginFailedReason::ThereIsNoAccount
             });
@@ -210,7 +205,7 @@ fn sign_in(setting:&ServerSetting, request:&rouille::Request, model:&mut model::
     
     let mut reader = RefReadBuffer::new(&s);
     let mut buffer:[u8;1024 * 8] = [0;1024*8];
-    let mut len = 0usize;
+    let len;
     {
         let mut writer = RefWriteBuffer::new(buffer.as_mut());
         encryptor.encrypt(&mut reader,&mut writer,true).unwrap();
@@ -428,7 +423,7 @@ fn main() {
                         msg:String::from("가입이 완료되었습니다.")
                     },
                     Err( e )=>match e{
-                        model::ModelError::CollapseInsertData(f)=>ApiResponse{
+                        model::ModelError::CollapseInsertData( _ )=>ApiResponse{
                             code:-1i32,
                             msg:String::from("이미 가입된 이메일과 중복됩니다.")
                         },
