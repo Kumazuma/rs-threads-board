@@ -90,5 +90,19 @@ impl Model for mysql::PooledConn {
         );
         return Some(res);
     }
+    fn add_new_comment(&mut self, thread_uid:i32, user:User, content:String)->Result<(), ModelError>{
+        let mut stmt = self.prepare(r"INSERT INTO tb_comments
+                                       (thread_uid, writer_uid, write_datetime, comment)
+                                   VALUES
+                                       (:thread_uid, :writer_uid, NOW(), :comment)").unwrap();
+        if let Err(e) = stmt.execute(params!{
+            "thread_uid" => thread_uid,
+            "writer_uid" => user.get_uid(),
+            "comment" => content,
+        }){
+            return Err(ModelError::CollapseInsertData(String::from("E-Mail")));
+        }
+        Ok(())
+    }
     // add code here
 }

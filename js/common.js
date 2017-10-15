@@ -68,7 +68,15 @@ $(document).ready(()=>{
                 dataType:"json",
                 data:parameter
             };
-            $.ajax(ajax_args)
+            $.ajax(ajax_args).done((e)=>{
+                $("#comment-write-content").val("");
+                let thread_uid = $("#comment-write-thread-uid").val();
+                $.ajax("/threads/" + thread_uid + "/comments", {
+                    dataType:"html",
+                }).done((e)=>{
+                    $("#comments-view").html(e);
+                });
+            });
         }
         e.preventDefault();
     });

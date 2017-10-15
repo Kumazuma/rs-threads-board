@@ -15,13 +15,16 @@ pub enum ConditionUserFind{
     ByNickname(String)
 }
 pub enum ModelError{
-    CollapseInsertData(String)
+    CollapseInsertData(String),
+    IncorrectThread,
+    IncorrectUser
 }
 pub trait Model{
      fn get_threads_list(&mut self,offset:usize, count:usize)->Vec<Thread>;
      fn get_user(&mut self,condition:ConditionUserFind)->Option<User>;
      fn add_new_user(&mut self, user:User)->Result<(), ModelError>;
      fn get_thread(&mut self, thread_uid:i32)->Option<ThreadBody>;
+     fn add_new_comment(&mut self, thread_uid:i32, user:User, content:String)->Result<(), ModelError>;
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Comment{

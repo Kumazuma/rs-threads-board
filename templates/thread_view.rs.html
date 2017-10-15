@@ -53,7 +53,7 @@
                     @thread.get_open_datetime() 에 열림
                 </span>
             </header>
-            <article>
+            <article id="comments-view">
                 @for comment in thread.get_comments(){
                 <div class="media">
                     <div class="media-left media-middle">
@@ -76,7 +76,7 @@
                         <form id="comment-write-form" action="/threads/@thread.get_uid()/comments" method="POST">
                             <div class="form-group">
                             <textarea id="comment-write-content" class="form-control"></textarea>   
-                            <input type="hidden" value="@thread.get_uid()">
+                            <input type="hidden" id="comment-write-thread-uid" value="@thread.get_uid()">
                             <input class="btn btn-default" type="submit" value="comment">
                         </form>
                     </div>

@@ -87,7 +87,26 @@ impl Response for ThreadVuewError{
         return rouille::Response::html("");
     }
 }
-
+struct CommentView{
+    body:model::ThreadBody
+}
+impl Response for CommentView {
+    // add code here
+    fn get_response(&self, request:&rouille::Request)->rouille::Response{
+        match check_accept_type(request){
+            ResponseContentType::Html=>{
+                let mut s = Vec::with_capacity(1024 * 1024);
+                templates::comments_view(&mut s,&self.body).unwrap();
+                rouille::Response::from_data("text/html;charset=utf-8", s)
+            },
+            ResponseContentType::Xml=>rouille::Response::html(""),
+            ResponseContentType::Json=>{
+                let v = try_or_400!(serde_json::to_vec(self.body.get_comments()));
+                rouille::Response::from_data("application/json", v)
+            }
+        }
+    }
+}
 
 #[derive(Serialize, Deserialize, Debug)]
 struct ServerSetting{
@@ -219,13 +238,13 @@ fn sign_in(setting:&ServerSetting, request:&rouille::Request, model:&mut model::
     });
 }
 
-fn check_sign(setting:&ServerSetting,token:String)->Result<SignInfomation, ()>{
+fn check_sign(setting:&ServerSetting,token:&String)->Result<SignInfomation, ()>{
  
     use crypto::aes::*;
     use crypto::blockmodes::*;
     use crypto::buffer::*;
     let mut decryptor = cbc_decryptor(KeySize::KeySize256, setting.aes_key.as_bytes(),setting.aes_iv.as_bytes(), PkcsPadding);
-    let val = match base64::decode(&token){
+    let val = match base64::decode(token){
         Ok(v)=>v,
         Err(e)=>{
             eprintln!("{}",e);
@@ -278,229 +297,242 @@ fn main() {
         };
         //eprintln!("{}",setting.db);
         let mut model = try_or_400!(pool.get_conn());
-		router!(request,
-            (GET) (/)=>{
-                let offset:usize = match request.get_param("offset").unwrap_or(String::from("0")).parse(){
-                    Ok(v)=>v,
-                    Err( _ )=>0usize
-                };
-                let count:usize = match request.get_param("offset").unwrap_or(String::from("25")).parse(){
-                    Ok(v)=>v,
-                    Err( _ )=>25usize
-                };
-                let list = model.get_threads_list(offset,count);
+router!(request,
+    (GET) (/)=>{
+        let offset:usize = match request.get_param("offset").unwrap_or(String::from("0")).parse(){
+            Ok(v)=>v,
+            Err( _ )=>0usize
+        };
+        let count:usize = match request.get_param("offset").unwrap_or(String::from("25")).parse(){
+            Ok(v)=>v,
+            Err( _ )=>25usize
+        };
+        let list = model.get_threads_list(offset,count);
+        let mut s = Vec::new();
+        
+        templates::default(&mut s,list).unwrap();
+        rouille::Response::from_data("text/html;charset=utf-8", s)
+    },
+    (GET) (/threads)=>{
+        let offset:usize = match request.get_param("offset").unwrap_or(String::from("0")).parse(){
+            Ok(v)=>v,
+            Err( _ )=>0usize
+        };
+        let count:usize = match request.get_param("offset").unwrap_or(String::from("25")).parse(){
+            Ok(v)=>v,
+            Err( _ )=>25usize
+        };
+        let list = model.get_threads_list(offset,count);
+        return match check_accept_type(request){
+            ResponseContentType::Json=>{
+                let v = try_or_400!(serde_json::to_vec(&list));
+                rouille::Response::from_data("application/json", v)
+            },
+            ResponseContentType::Html=>{
                 let mut s = Vec::new();
-                
                 templates::default(&mut s,list).unwrap();
                 rouille::Response::from_data("text/html;charset=utf-8", s)
             },
-            (GET) (/threads)=>{
-                let offset:usize = match request.get_param("offset").unwrap_or(String::from("0")).parse(){
-                    Ok(v)=>v,
-                    Err( _ )=>0usize
-                };
-                let count:usize = match request.get_param("offset").unwrap_or(String::from("25")).parse(){
-                    Ok(v)=>v,
-                    Err( _ )=>25usize
-                };
-                let list = model.get_threads_list(offset,count);
-                return match check_accept_type(request){
-                    ResponseContentType::Json=>{
-                        let v = try_or_400!(serde_json::to_vec(&list));
-                        rouille::Response::from_data("application/json", v)
-                    },
-                    ResponseContentType::Html=>{
-                        let mut s = Vec::new();
-                        templates::default(&mut s,list).unwrap();
-                        rouille::Response::from_data("text/html;charset=utf-8", s)
-                    },
-                    ResponseContentType::Xml=>{
-                        let mut s = Vec::new();
-                        templates::xml_threads_list(&mut s,list).unwrap();
-                        rouille::Response::from_data("application/xml", s)
-                    }
-                };
-            },
-            (GET) (/threads/)=>{
-                let offset:usize = match request.get_param("offset").unwrap_or(String::from("0")).parse(){
-                    Ok(v)=>v,
-                    Err( _ )=>0usize
-                };
-                let count:usize = match request.get_param("offset").unwrap_or(String::from("25")).parse(){
-                    Ok(v)=>v,
-                    Err( _ )=>25usize
-                };
-                let list = model.get_threads_list(offset,count);
-                return match check_accept_type(request){
-                    ResponseContentType::Json=>{
-                        let v = try_or_400!(serde_json::to_vec(&list));
-                        rouille::Response::from_data("application/json", v)
-                    },
-                    ResponseContentType::Html=>{
-                        let mut s = Vec::new();
-                        templates::default(&mut s,list).unwrap();
-                        rouille::Response::from_data("text/html;charset=utf-8", s)
-                    },
-                    ResponseContentType::Xml=>{
-                        let mut s = Vec::new();
-                        templates::xml_threads_list(&mut s,list).unwrap();
-                        rouille::Response::from_data("application/xml", s)
-                    }
-                };
-            },
-            (POST) (/threads)=>{
-                rouille::Response::text("스레드 생성")
-            },
-            (GET) (/threads/{id:i32})=>{
-                let response:Box<Response>;
-                if let Some(t) = model.get_thread(id){
-                    response = Box::new(ThreadView{body:t});
-                }
-                else{
-                    response = Box::new(ThreadVuewError{});
-                }
-                response.get_response(request)
-            },
-            (DELETE) (/threads/{id:String})=>{
-                eprint!("{}",id);
-                rouille::Response::text("스레드 삭제")
-            },
-            (GET) (/threads/{id:String}/comments)=>{
-                eprint!("{}",id);
-                rouille::Response::text("스레드 코멘트 로드")
-            },
-            (POST) (/threads/{id:i32}/comments)=>{
-                let param =try_or_400!(post_input!(request,{
-                  content:String,
-                  token:String  
-                }));
-
-                eprint!("{}",id);
-                
-                rouille::Response::text("스레드 코멘트 추가")
-            },
-            (GET) (/threads/{id:String}/comments/{c_id:String})=>{
-                eprint!("{}, {}",id, c_id);
-                rouille::Response::text("코멘트 정보 뷰")
-            },
-            (PUT) (/threads/{id:String}/comments/{c_id:String})=>{
-                eprint!("{}, {}",id, c_id);
-                rouille::Response::text("코멘트 수정")
-            },
-            (DELETE) (/threads/{id:String}/comments/{c_id:String})=>{
-                eprint!("{}, {}",id, c_id);
-                rouille::Response::text("코멘트 삭제")
-            },
-            (POST) (/threads/{id:String}/comments/{c_id:String}/thumbsup)=>{
-                eprint!("{}, {}",id, c_id);
-                rouille::Response::text("코멘트 추천")
-            },
-            (POST) (/threads/{id:String}/comments/{c_id:String}/thumbsdown)=>{
-                eprint!("{}, {}",id, c_id);
-                rouille::Response::text("코멘트 추천")
-            },
-            (GET) (/tags)=>{
-                rouille::Response::text("태그 리스트")
-            },
-            (GET) (/tags/{tag:String}/threads)=>{
-                eprint!("{}",tag);
-                rouille::Response::text("태그가 붙여진 스레드 리스트")
-            },
-            (GET) (/signup)=>{
+            ResponseContentType::Xml=>{
                 let mut s = Vec::new();
-                templates::signup(&mut s).unwrap();
-                return rouille::Response::from_data("text/html;charset=utf-8", s);
+                templates::xml_threads_list(&mut s,list).unwrap();
+                rouille::Response::from_data("application/xml", s)
+            }
+        };
+    },
+    (GET) (/threads/)=>{
+        let offset:usize = match request.get_param("offset").unwrap_or(String::from("0")).parse(){
+            Ok(v)=>v,
+            Err( _ )=>0usize
+        };
+        let count:usize = match request.get_param("offset").unwrap_or(String::from("25")).parse(){
+            Ok(v)=>v,
+            Err( _ )=>25usize
+        };
+        let list = model.get_threads_list(offset,count);
+        return match check_accept_type(request){
+            ResponseContentType::Json=>{
+                let v = try_or_400!(serde_json::to_vec(&list));
+                rouille::Response::from_data("application/json", v)
             },
-            (POST) (/users)=>{
-                let input = try_or_400!(post_input!(request, {
-                    email: String,
-                    nickname: String,
-                    password:String
-                }));
-                let user = model::User::new(0, input.nickname, input.email, Some(to_sha3(input.password.as_str())));
-                let response = 
-                match model.add_new_user(user){
-                    Ok( _ )=>ApiResponse{
-                        code:0i32,
-                        msg:String::from("가입이 완료되었습니다.")
-                    },
-                    Err( e )=>match e{
-                        model::ModelError::CollapseInsertData( _ )=>ApiResponse{
-                            code:-1i32,
-                            msg:String::from("이미 가입된 이메일과 중복됩니다.")
-                        },
-                        _=>ApiResponse{
-                            code:-1i32,
-                            msg:String::from("이미 가입된 이메일과 중복됩니다.")
-                        }
-                    }
-                };
-                let code = if response.code == 0{200}else{400};
-                return match check_accept_type(request){
-                    ResponseContentType::Json=>{
-                        let v = try_or_400!(serde_json::to_vec(&response));
-                        rouille::Response::from_data("application/json", v).with_status_code(code)
-                    },
-                    ResponseContentType::Xml=>{
-                        let mut s = Vec::new();
-                        templates::xml_api_response(&mut s,response).unwrap();
-                        rouille::Response::from_data("application/xml", s).with_status_code(code)
-                    },
-                    ResponseContentType::Html=>rouille::Response::empty_404(),
-                };
+            ResponseContentType::Html=>{
+                let mut s = Vec::new();
+                templates::default(&mut s,list).unwrap();
+                rouille::Response::from_data("text/html;charset=utf-8", s)
             },
-            (GET) (/users/{user_name:String})=>{
-                eprint!("{}",user_name);
-                rouille::Response::text("회원 정보")
+            ResponseContentType::Xml=>{
+                let mut s = Vec::new();
+                templates::xml_threads_list(&mut s,list).unwrap();
+                rouille::Response::from_data("application/xml", s)
+            }
+        };
+    },
+    (POST) (/threads)=>{
+        rouille::Response::text("스레드 생성")
+    },
+    (GET) (/threads/{id:i32})=>{
+        let response:Box<Response>;
+        if let Some(t) = model.get_thread(id){
+            response = Box::new(ThreadView{body:t});
+        }
+        else{
+            response = Box::new(ThreadVuewError{});
+        }
+        response.get_response(request)
+    },
+    (DELETE) (/threads/{id:String})=>{
+        eprint!("{}",id);
+        rouille::Response::text("스레드 삭제")
+    },
+    (GET) (/threads/{id:i32}/comments)=>{
+        let response:Box<Response>;
+        if let Some(t) = model.get_thread(id){
+            response = Box::new(CommentView{body:t});
+        }
+        else{
+            response = Box::new(ThreadVuewError{});
+        }
+        response.get_response(request)
+    },
+    (POST) (/threads/{id:i32}/comments)=>{
+        let param =try_or_400!(post_input!(request,{
+            content:String,
+            token:String  
+        }));
+        let sign = match check_sign(setting, &param.token){
+            Ok(v)=>v,
+            Err( _ )=>return rouille::Response::text("application/json").with_status_code(400)
+        };
+        let user =match model.get_user(model::ConditionUserFind::ByEMail(sign.email)){
+            Some(v)=>v,
+            None=>return rouille::Response::text("application/json").with_status_code(400)
+        };
+        model.add_new_comment(id, user, param.content);
+        let v:Vec<u8> =b"{}".to_vec();
+        rouille::Response::from_data("application/json", v)
+    },
+    (GET) (/threads/{id:String}/comments/{c_id:String})=>{
+        eprint!("{}, {}",id, c_id);
+        rouille::Response::text("코멘트 정보 뷰")
+    },
+    (PUT) (/threads/{id:String}/comments/{c_id:String})=>{
+        eprint!("{}, {}",id, c_id);
+        rouille::Response::text("코멘트 수정")
+    },
+    (DELETE) (/threads/{id:String}/comments/{c_id:String})=>{
+        eprint!("{}, {}",id, c_id);
+        rouille::Response::text("코멘트 삭제")
+    },
+    (POST) (/threads/{id:String}/comments/{c_id:String}/thumbsup)=>{
+        eprint!("{}, {}",id, c_id);
+        rouille::Response::text("코멘트 추천")
+    },
+    (POST) (/threads/{id:String}/comments/{c_id:String}/thumbsdown)=>{
+        eprint!("{}, {}",id, c_id);
+        rouille::Response::text("코멘트 추천")
+    },
+    (GET) (/tags)=>{
+        rouille::Response::text("태그 리스트")
+    },
+    (GET) (/tags/{tag:String}/threads)=>{
+        eprint!("{}",tag);
+        rouille::Response::text("태그가 붙여진 스레드 리스트")
+    },
+    (GET) (/signup)=>{
+        let mut s = Vec::new();
+        templates::signup(&mut s).unwrap();
+        return rouille::Response::from_data("text/html;charset=utf-8", s);
+    },
+    (POST) (/users)=>{
+        let input = try_or_400!(post_input!(request, {
+            email: String,
+            nickname: String,
+            password:String
+        }));
+        let user = model::User::new(0, input.nickname, input.email, Some(to_sha3(input.password.as_str())));
+        let response = 
+        match model.add_new_user(user){
+            Ok( _ )=>ApiResponse{
+                code:0i32,
+                msg:String::from("가입이 완료되었습니다.")
             },
-            (PUT) (/users/{user_name:String})=>{
-                eprint!("{}",user_name);
-                rouille::Response::text("회원정보 수정")
+            Err( e )=>match e{
+                model::ModelError::CollapseInsertData( _ )=>ApiResponse{
+                    code:-1i32,
+                    msg:String::from("이미 가입된 이메일과 중복됩니다.")
+                },
+                _=>ApiResponse{
+                    code:-1i32,
+                    msg:String::from("이미 가입된 이메일과 중복됩니다.")
+                }
+            }
+        };
+        let code = if response.code == 0{200}else{400};
+        return match check_accept_type(request){
+            ResponseContentType::Json=>{
+                let v = try_or_400!(serde_json::to_vec(&response));
+                rouille::Response::from_data("application/json", v).with_status_code(code)
             },
-            (GET) (/login)=>{
-                rouille::Response::text("로그인 폼")
+            ResponseContentType::Xml=>{
+                let mut s = Vec::new();
+                templates::xml_api_response(&mut s,response).unwrap();
+                rouille::Response::from_data("application/xml", s).with_status_code(code)
             },
-			(POST) (/login)=>{
-                sign_in(setting, request,&mut model).get_response(&request)
-            },
-            (POST) (/logout)=>{
-                //eprint!("{}",user_name);
-                rouille::Response::text("로그아웃")
-			},
-			(GET) (/css/{css:String}) =>{
-				let css_path = Path::new("./css").join(css);
-				//println!("{:?}",css_path.as_path());
-				if let Ok(file) = File::open(css_path){
-					rouille::Response::from_file("text/css",file)
-				}
-				else{
-					rouille::Response::empty_404()
-				}
-			},
-			(GET) (/font/{font:String}) =>{
-				let font_path = Path::new("./font").join(font);
-				//println!("{:?}",font_path.as_path());
-				if let Ok(file) = File::open(font_path){
-					rouille::Response::from_file("application/font",file)
-				}
-				else{
-					rouille::Response::empty_404()
-				}
-			},
-			(GET) (/js/{js:String}) =>{
-				let js_path = Path::new("./js").join(js);
-				//println!("{:?}",js_path.as_path());
-				if let Ok(file) = File::open(js_path){
-					rouille::Response::from_file("script/javascript",file)
-				}
-				else{
-					rouille::Response::empty_404()
-				}
-			},
-			// The code block is called if none of the other blocks matches the request.
-			// We return an empty response with a 404 status code.
-			_ => rouille::Response::empty_404()
-		)
+            ResponseContentType::Html=>rouille::Response::empty_404(),
+        };
+    },
+    (GET) (/users/{user_name:String})=>{
+        eprint!("{}",user_name);
+        rouille::Response::text("회원 정보")
+    },
+    (PUT) (/users/{user_name:String})=>{
+        eprint!("{}",user_name);
+        rouille::Response::text("회원정보 수정")
+    },
+    (GET) (/login)=>{
+        rouille::Response::text("로그인 폼")
+    },
+    (POST) (/login)=>{
+        sign_in(setting, request,&mut model).get_response(&request)
+    },
+    (POST) (/logout)=>{
+        //eprint!("{}",user_name);
+        rouille::Response::text("로그아웃")
+    },
+    (GET) (/css/{css:String}) =>{
+        let css_path = Path::new("./css").join(css);
+        //println!("{:?}",css_path.as_path());
+        if let Ok(file) = File::open(css_path){
+            rouille::Response::from_file("text/css",file)
+        }
+        else{
+            rouille::Response::empty_404()
+        }
+    },
+    (GET) (/font/{font:String}) =>{
+        let font_path = Path::new("./font").join(font);
+        //println!("{:?}",font_path.as_path());
+        if let Ok(file) = File::open(font_path){
+            rouille::Response::from_file("application/font",file)
+        }
+        else{
+            rouille::Response::empty_404()
+        }
+    },
+    (GET) (/js/{js:String}) =>{
+        let js_path = Path::new("./js").join(js);
+        //println!("{:?}",js_path.as_path());
+        if let Ok(file) = File::open(js_path){
+            rouille::Response::from_file("script/javascript",file)
+        }
+        else{
+            rouille::Response::empty_404()
+        }
+    },
+    // The code block is called if none of the other blocks matches the request.
+    // We return an empty response with a 404 status code.
+    _ => rouille::Response::empty_404()
+)
 	}).unwrap();
 	println!("Listening on {:?}", server.server_addr());
 	server.run();

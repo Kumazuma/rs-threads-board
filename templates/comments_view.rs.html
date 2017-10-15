@@ -1,0 +1,14 @@
+@* A very simple template with no arguments.  This line is a comment. *@
+@use model::ThreadBody;
+@(thread:&ThreadBody)
+@for comment in thread.get_comments(){
+<div class="media">
+    <div class="media-left media-middle">
+        <img class="media-object" src="@comment.get_user().get_gravatar_url(Some(64))">
+        <span>@comment.get_user().get_nickname()</span>
+    </div>
+    <div class="media-body">
+        @comment.get_content()
+    </div>
+</div>
+}
