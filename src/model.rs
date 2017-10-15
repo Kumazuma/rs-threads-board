@@ -77,6 +77,9 @@ pub struct ThreadBody{
     pub fn get_comments(&self)->&Vec<Comment>{
         &self.comments
     }
+    pub fn get_uid(&self)->i32{
+        return self.uid;
+    }
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Thread{

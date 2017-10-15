@@ -73,10 +73,10 @@
                         <span id="comment-writer"></span>
                     </div>
                     <div class="media-body">
-                        <form id="comment-write-form" action="./comments" method="POST">
+                        <form id="comment-write-form" action="/threads/@thread.get_uid()/comments" method="POST">
                             <div class="form-group">
-                            <textarea class="form-control"></textarea>   
-                            
+                            <textarea id="comment-write-content" class="form-control"></textarea>   
+                            <input type="hidden" value="@thread.get_uid()">
                             <input class="btn btn-default" type="submit" value="comment">
                         </form>
                     </div>

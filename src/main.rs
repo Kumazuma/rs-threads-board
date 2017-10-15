@@ -89,9 +89,6 @@ impl Response for ThreadVuewError{
 }
 
 
-
-
-
 #[derive(Serialize, Deserialize, Debug)]
 struct ServerSetting{
 	host:String,
@@ -221,33 +218,32 @@ fn sign_in(setting:&ServerSetting, request:&rouille::Request, model:&mut model::
         gravatar:user.get_gravatar_url(Some(34))
     });
 }
-fn check_sign(setting:&ServerSetting,request:&rouille::Request)->Result<SignInfomation, ()>{
-    if let Some((_, val)) = rouille::input::cookies(&request).find(|&(n, _)| n == "sign-signiture") {
-        println!("Value of cookie = {:?}", val);
-        use crypto::aes::*;
-        use crypto::blockmodes::*;
-        use crypto::buffer::*;
-        let mut decryptor = cbc_decryptor(KeySize::KeySize256, setting.aes_key.as_bytes(),setting.aes_iv.as_bytes(), PkcsPadding);
-        let val = match base64::decode(val){
-            Ok(v)=>v,
-            Err(e)=>{
-                eprintln!("{}",e);
-                return Err(());
-            }
-        };
-        let mut reader = RefReadBuffer::new(&val);
-        let mut buffer:[u8;1024 * 4] = [0;1024*4];
-        let mut len = 0usize;
-        {
-            let mut writer = RefWriteBuffer::new(buffer.as_mut());
-            if let Err(e) = decryptor.decrypt(&mut reader,&mut writer,true){
-                return Err(());
-            }
-            len = writer.position();
+
+fn check_sign(setting:&ServerSetting,token:String)->Result<SignInfomation, ()>{
+ 
+    use crypto::aes::*;
+    use crypto::blockmodes::*;
+    use crypto::buffer::*;
+    let mut decryptor = cbc_decryptor(KeySize::KeySize256, setting.aes_key.as_bytes(),setting.aes_iv.as_bytes(), PkcsPadding);
+    let val = match base64::decode(&token){
+        Ok(v)=>v,
+        Err(e)=>{
+            eprintln!("{}",e);
+            return Err(());
         }
-        if let Ok(v) = serde_json::from_slice(&buffer[0..len]){
-            return Ok(v);
+    };
+    let mut reader = RefReadBuffer::new(&val);
+    let mut buffer:[u8;1024 * 4] = [0;1024*4];
+    let mut len = 0usize;
+    {
+        let mut writer = RefWriteBuffer::new(buffer.as_mut());
+        if let Err(e) = decryptor.decrypt(&mut reader,&mut writer,true){
+            return Err(());
         }
+        len = writer.position();
+    }
+    if let Ok(v) = serde_json::from_slice(&buffer[0..len]){
+        return Ok(v);
     }
     return Err(());
 }
@@ -374,7 +370,13 @@ fn main() {
                 rouille::Response::text("스레드 코멘트 로드")
             },
             (POST) (/threads/{id:i32}/comments)=>{
+                let param =try_or_400!(post_input!(request,{
+                  content:String,
+                  token:String  
+                }));
+
                 eprint!("{}",id);
+                
                 rouille::Response::text("스레드 코멘트 추가")
             },
             (GET) (/threads/{id:String}/comments/{c_id:String})=>{
