@@ -98,3 +98,11 @@ body{
 section{
     background-color: #FFF;
 }
+.comment-writed-date{
+    position: absolute;
+    right:0px;
+    top:0px;
+}
+#comments-view .media-body{
+    position: relative;
+}

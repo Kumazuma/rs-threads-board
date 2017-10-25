@@ -16,6 +16,7 @@ function signout(){
     $("#user-info").css("display","none");
 }
 $(document).ready(()=>{
+
     checkSignin();
     $("#btn-signout").on("click",(e)=>{
         signout();
@@ -69,9 +70,10 @@ $(document).ready(()=>{
                 data:parameter
             };
             $.ajax(ajax_args).done((e)=>{
+
                 $("#comment-write-content").val("");
                 let thread_uid = $("#comment-write-thread-uid").val();
-                $.ajax("/threads/" + thread_uid + "/comments", {
+                $.ajax(document.URL + "/comments", {
                     dataType:"html",
                 }).done((e)=>{
                     $("#comments-view").html(e);

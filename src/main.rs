@@ -155,7 +155,7 @@ fn check_accept_type(request:&rouille::Request)->ResponseContentType{
             10
         }
         else{
-            eprintln!("{}",s[1]);
+            //eprintln!("{}",s[1]);
             let t:f32 = s[1].parse().unwrap();
             (t * 10f32) as i32
         };
@@ -164,7 +164,7 @@ fn check_accept_type(request:&rouille::Request)->ResponseContentType{
             10
         }
         else{
-            eprintln!("{}",s[1]);
+            //eprintln!("{}",s[1]);
             let t:f32 = s[1].parse().unwrap();
             (t * 10f32) as i32
         };
@@ -174,7 +174,7 @@ fn check_accept_type(request:&rouille::Request)->ResponseContentType{
         }
     }).unwrap();
     let v:Vec<&str> = select_accept_type.split("/").collect();
-    eprintln!("{:?}",v);
+    //eprintln!("{:?}",v);
     return match v[1].split(";").next().unwrap(){
         "html"|"xhtml"=>ResponseContentType::Html,
         "json"=>ResponseContentType::Json,
@@ -380,6 +380,7 @@ router!(request,
         }
         response.get_response(request)
     },
+    (GET) (/threads/{id:i32}/)=>{rouille::Response::empty_404()},
     (DELETE) (/threads/{id:String})=>{
         eprint!("{}",id);
         rouille::Response::text("스레드 삭제")

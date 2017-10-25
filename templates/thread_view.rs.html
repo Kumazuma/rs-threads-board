@@ -10,11 +10,13 @@
         <script src="http://code.jquery.com/jquery-3.2.1.min.js"></script>
         <script src="/js/bootstrap.min.js"></script>
         <script src="/js/common.js"></script>
+        <script src="/js/threads.js"></script>
         <link rel="stylesheet" href="/css/bootstrap.css" />
         <link rel="stylesheet" href="/css/common.css" />
         <title>Document</title>
     </head>
     <body style="padding-top:70px;">
+        <input type="hidden" id="comment-write-thread-uid" value="@thread.get_uid()">
         <nav class="navbar navbar-default navbar-fixed-top">
             <div class="container">
                 <div class="navbar-header">
@@ -62,6 +64,7 @@
                     </div>
                     <div class="media-body">
                         @comment.get_content()
+                        <span class="comment-writed-date">@comment.get_writed_datetime()</span>
                     </div>
                 </div>
                 }
@@ -76,7 +79,6 @@
                         <form id="comment-write-form" action="/threads/@thread.get_uid()/comments" method="POST">
                             <div class="form-group">
                             <textarea id="comment-write-content" class="form-control"></textarea>   
-                            <input type="hidden" id="comment-write-thread-uid" value="@thread.get_uid()">
                             <input class="btn btn-default" type="submit" value="comment">
                         </form>
                     </div>
