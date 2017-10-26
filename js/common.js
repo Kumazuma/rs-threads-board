@@ -9,9 +9,9 @@ function checkSignin(){
     }
 }
 function signout(){
-    document.cookie = "nickname=";
-    document.cookie = "token=";
-    document.cookie = "gravatar=";
+    document.cookie = "nickname=;path=/";
+    document.cookie = "token=;path=/";
+    document.cookie = "gravatar=;path=/";
     $("#sign-in-form").css("display","");
     $("#user-info").css("display","none");
 }
@@ -30,9 +30,9 @@ $(document).ready(()=>{
             data:$("#sign-in-form").serialize()
         };
         $.ajax(ajax_args).done((e)=>{
-            document.cookie = "nickname=" + e.nickname;
-            document.cookie = "token=" + e.token;
-            document.cookie = "gravatar=" + e.gravatar;
+            document.cookie = "nickname=" + e.nickname + ";path=/";
+            document.cookie = "token=" + e.token + ";path=/";
+            document.cookie = "gravatar=" + e.gravatar + ";path=/";
             checkSignin();
         }).fail(( jqXHR, textStatus )=>{   
             let json_res = jqXHR.responseJSON;

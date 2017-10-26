@@ -1,7 +1,7 @@
 @* A very simple template with no arguments.  This line is a comment. *@
-@use model::ThreadBody;
-@(thread:&ThreadBody)
-@for comment in thread.get_comments(){
+@use model::Comment;
+@(comments:&Vec<Comment>)
+@for comment in comments{
 <div class="media">
     <div class="media-left media-middle">
         <img class="media-object" src="@comment.get_user().get_gravatar_url(Some(64))">
