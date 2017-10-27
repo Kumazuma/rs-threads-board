@@ -1,0 +1,32 @@
+@()
+<nav class="navbar navbar-default navbar-fixed-top">
+    <div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#menu-navbar-1">
+                <span class="sr-only">Toggle Navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="/">rs-board</a>
+        </div>
+        <div class ="collapse navbar-collapse" id = "menu-navbar-1">
+            <ul id="menu" class="nav navbar-nav">
+                <li role="presentation"><a href="/threads">목록</a></li>
+                <li role="presentation"><a href="/tags">태그 목록</a></li>
+                <li role="presentation"><a href="/threads/write">스레드 생성</a></li>
+            </ul>
+            <form id="sign-in-form" action="/login" class="navbar-form navbar-right" role="sign-in">
+                <div class="form-group">
+                    <input type="text" class="form-control" placeholder="E-Mail" name="email">
+                    <input type="password" class="form-control" placeholder="password" name="password">
+                </div>
+                <button type="submit" class="btn btn-default">sign in</button>
+                <a href="/signup" class="btn btn-default">sign up</a>
+            </form>
+            <div id="user-info" style="display: none;" class="navbar-right navbar-form">
+                <img id="user-gravatar"><button id="btn-signout" class="btn btn-default">sign out</button>
+            </div>
+        </div>
+    </div>
+</nav>

@@ -286,8 +286,7 @@ fn main() {
         .prefer_socket(false)
         .tcp_port(3306);
     let pool = mysql::Pool::new(mysql::Opts::from(builder)).unwrap();
-    //let setting:*const _ = &setting;
-    //std::mem::forget(setting);
+
 	println!("Now listening on localhost:9999");
 	// The `start_server` starts listening forever on the given address.
 	let server = Server::new("0.0.0.0:9999", move |request| {
@@ -298,7 +297,6 @@ fn main() {
         };
         //eprintln!("{}",setting.db);
         let mut model = try_or_400!(pool.get_conn());
-        
 router!(request,
     (GET) (/)=>{
         let offset:usize = match request.get_param("offset").unwrap_or(String::from("0")).parse(){
@@ -382,7 +380,7 @@ router!(request,
         }
         response.get_response(request)
     },
-    (GET) (/threads/{id:i32}/)=>{rouille::Response::empty_404()},
+    (GET) (/threads/{id:i32}/)=>{let id = id;rouille::Response::empty_404()},
     (DELETE) (/threads/{id:String})=>{
         eprint!("{}",id);
         rouille::Response::text("스레드 삭제")

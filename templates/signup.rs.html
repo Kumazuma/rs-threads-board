@@ -1,52 +1,15 @@
 @* A very simple template with no arguments.  This line is a comment. *@
+@use templates::{default_js_header, default_navbar};
 @()
 <!DOCTYPE html>
 <html lang="ko">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <meta http-equiv="X-UA-Compatible" content="ie=edge">
-        <script src="http://code.jquery.com/jquery-3.2.1.min.js"></script>
-        <script src="/js/bootstrap.min.js"></script>
-        <script src="/js/common.js"></script>
-        <script src="/js/signup.js"></script>
-
-        <link rel="stylesheet" href="/css/bootstrap.css" />
-        <link rel="stylesheet" href="/css/common.css" />
-        <title>Document</title>
-    </head>
-    <body style="padding-top:70px;">
-        <nav class="navbar navbar-default navbar-fixed-top">
-                <div class="container">
-                    <div class="navbar-header">
-                        <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#menu-navbar-1">
-                            <span class="sr-only">Toggle Navigation</span>
-                            <span class="icon-bar"></span>
-                            <span class="icon-bar"></span>
-                            <span class="icon-bar"></span>
-                        </button>
-                        <a class="navbar-brand" href="/">rs-board</a>
-                    </div>
-                    <div class ="collapse navbar-collapse" id = "menu-navbar-1">
-                        <ul id="menu" class="nav navbar-nav">
-                            <li role="presentation"><a href="/threads">목록</a></li>
-                            <li role="presentation"><a href="/tags">태그 목록</a></li>
-                            <li role="presentation"><a href="/threads/write">스레드 생성</a></li>
-                        </ul>
-                        <form id="sign-in-form" action="/login" class="navbar-form navbar-right" role="sign-in">
-                            <div class="form-group">
-                                <input type="text" class="form-control" placeholder="E-Mail" name="email">
-                                <input type="password" class="form-control" placeholder="password" name="password">
-                            </div>
-                            <button type="submit" class="btn btn-default">sign in</button>
-                            <a href="/signup" class="btn btn-default">sign up</a>
-                        </form>
-                        <div id="user-info" style="display: none;" class="navbar-right navbar-form">
-                            <img id="user-gravatar"><button id="btn-signout" class="btn btn-default">sign out</button>
-                        </div>
-                    </div>
-                </div>
-            </nav>
+        <head>
+            @:default_js_header()
+            <title>Document</title>
+            <script src="/js/signup.js"></script>
+        </head>
+        <body style="padding-top:70px;">
+            @:default_navbar()
         <section class="container">
             <form id="signup-form" class="form-horizontal" method="POST" action="/users">
                 <div class="form-group">

@@ -120,7 +120,7 @@ impl Model for mysql::PooledConn {
         }
         Ok(())
     }
-    fn add_thread(&mut self, subject:&String, user:User)->Result<Thread, ()>{
+    fn add_thread(&mut self, subject:&String, user:User,first_comment:&String)->Result<Thread, ()>{
         use mysql::IsolationLevel;
         let uid:i32;
         {
@@ -138,11 +138,18 @@ impl Model for mysql::PooledConn {
             */
             let params:&[&ToValue] = &[&user.get_uid(), &user.get_nickname(), subject];
             transaction.prep_exec("INSERT INTO tb_threads (opener_uid, opener_nickname, subject, created_datetime) VALUES (?,?,?,now())",params);
+            transaction.prep_exec("INSERT INTO tb_threads (opener_uid, opener_nickname, subject, created_datetime) VALUES (?,?,?,now())",params);
+            transaction.prep_exec(r"INSERT INTO tb_comments
+                                       (thread_uid, writer_uid, write_datetime, comment)
+                                   VALUES
+                                       (:thread_uid, :writer_uid, NOW(), :comment)",params!{
+                "thread_uid" => uid + 1,
+                "writer_uid" => user.get_uid(),
+                "comment" => first_comment,
+            }).unwrap();
             transaction.commit();
             
         }
-        
-        
         return match self.get_thread(uid + 1){
             Some(v)=>Ok(v),
             None=>Err(())
