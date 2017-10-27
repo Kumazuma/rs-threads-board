@@ -13,6 +13,7 @@ impl Model for mysql::PooledConn {
                 row.take("uid").expect("uid"),
                 row.take("subject").expect("uid"),
                 row.take("recent_update").expect("recent_update"),
+                row.take("created_datetime").expect("created_datetime"),
                 User::new(
                     row.take("opener_uid").expect("opener_uid"),
                     row.take("opener_nickname").expect("opener_nickname"),
@@ -60,14 +61,32 @@ impl Model for mysql::PooledConn {
         }
         return Ok(());
     }
-    fn get_thread(&mut self, thread_uid:i32)->Option<ThreadBody>{
+    fn get_thread(&mut self, thread_uid:i32)->Option<Thread>{
         let sql =format!("SELECT * FROM v_thread_list WHERE uid = ? LIMIT 1");
         let params:&[&ToValue] = &[&thread_uid];
         let mut thread = match self.first_exec(sql, params).unwrap(){
             Some(v)=>v,
             None=>return None
         };
+
+        
+        let res = Thread::new(
+            thread.take("uid").expect("uid"),
+            thread.take("subject").expect("uid"),
+            thread.take("recent_update").expect("recent_update"),
+            thread.take("created_datetime").expect("created_datetime"),
+            User::new(
+                thread.take("opener_uid").expect("opener_uid"),
+                thread.take("opener_nickname").expect("opener_nickname"),
+                thread.take("opener_email").expect("opener_email"),
+                None
+            )
+        );
+        return Some(res);
+    }
+    fn get_comments(&mut self, thread_uid:i32)->Option<Vec<Comment>>{
         let sql ="SELECT * FROM v_comments WHERE thread_uid = ?";
+        let params:&[&ToValue] = &[&thread_uid];
         let comments:Vec< _ >  = self.prep_exec(sql,params).unwrap().map(|row|{
             let mut row = row.unwrap();
             Comment::new(
@@ -82,13 +101,10 @@ impl Model for mysql::PooledConn {
                 row.take("comment").expect("comment")
             )
         }).collect();
-        let res = ThreadBody::new(
-            thread_uid,
-            thread.take("subject").expect("uid"),
-            thread.take("created_datetime").expect("created_datetime"),
-            comments
-        );
-        return Some(res);
+        if comments.len() == 0{
+            return None;
+        }
+        return Some(comments);
     }
     fn add_new_comment(&mut self, thread_uid:i32, user:User, content:String)->Result<(), ModelError>{
         let mut stmt = self.prepare(r"INSERT INTO tb_comments

@@ -1,6 +1,6 @@
 @* A very simple template with no arguments.  This line is a comment. *@
-@use model::ThreadBody;
-@(thread:&ThreadBody)
+@use model::Thread;
+@(thread:&Thread)
 <!DOCTYPE html>
 <html lang="ko">
     <head>
@@ -26,7 +26,7 @@
                         <span class="icon-bar"></span>
                         <span class="icon-bar"></span>
                     </button>
-                    <a class="navbar-brand" href="/">rs-threads-board</a>
+                    <a class="navbar-brand" href="/">rs-board</a>
                 </div>
                 <div class ="collapse navbar-collapse" id = "menu-navbar-1">
                     <ul id="menu" class="nav navbar-nav">
@@ -56,18 +56,7 @@
                 </span>
             </header>
             <article id="comments-view">
-                @for comment in thread.get_comments(){
-                <div class="media">
-                    <div class="media-left media-middle">
-                        <img class="media-object" src="@comment.get_user().get_gravatar_url(Some(64))">
-                        <span>@comment.get_user().get_nickname()</span>
-                    </div>
-                    <div class="media-body">
-                        @comment.get_content()
-                        <span class="comment-writed-date">@comment.get_writed_datetime()</span>
-                    </div>
-                </div>
-                }
+
             </article>
             <footer>
                 <div class="media" id="comment-write-area">

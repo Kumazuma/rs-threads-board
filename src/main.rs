@@ -60,7 +60,7 @@ impl Response for LoginSuccess {
     }
 }
 struct ThreadView{
-    body:model::ThreadBody
+    body:model::Thread
 }
 struct ThreadVuewError{
 
@@ -88,7 +88,7 @@ impl Response for ThreadVuewError{
     }
 }
 struct CommentView{
-    body:model::ThreadBody
+    body:Vec<model::Comment>
 }
 impl Response for CommentView {
     // add code here
@@ -101,7 +101,7 @@ impl Response for CommentView {
             },
             ResponseContentType::Xml=>rouille::Response::html(""),
             ResponseContentType::Json=>{
-                let v = try_or_400!(serde_json::to_vec(self.body.get_comments()));
+                let v = try_or_400!(serde_json::to_vec(&self.body));
                 rouille::Response::from_data("application/json", v)
             }
         }
@@ -388,7 +388,7 @@ router!(request,
     },
     (GET) (/threads/{id:i32}/comments)=>{
         let response:Box<Response>;
-        if let Some(t) = model.get_thread(id){
+        if let Some(t) = model.get_comments(id){
             response = Box::new(CommentView{body:t});
         }
         else{

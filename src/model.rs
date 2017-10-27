@@ -23,8 +23,10 @@ pub trait Model{
      fn get_threads_list(&mut self,offset:usize, count:usize)->Vec<Thread>;
      fn get_user(&mut self,condition:ConditionUserFind)->Option<User>;
      fn add_new_user(&mut self, user:User)->Result<(), ModelError>;
-     fn get_thread(&mut self, thread_uid:i32)->Option<ThreadBody>;
+     fn get_thread(&mut self, thread_uid:i32)->Option<Thread>;
      fn add_new_comment(&mut self, thread_uid:i32, user:User, content:String)->Result<(), ModelError>;
+     fn get_comments(&mut self, thread_uid:i32)->Option<Vec<Comment>>;
+
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Comment{
@@ -89,16 +91,18 @@ pub struct Thread{
     uid:i32,
     subject:String,
     opener:User,
-    recent_update_datetime:NaiveDateTime
+    recent_update_datetime:NaiveDateTime,
+    open_datetime:NaiveDateTime
 }
 
 impl Thread{
-    pub fn new(uid:i32, subject:String, recent_update_datetime:NaiveDateTime, opener:User)->Thread{
+    pub fn new(uid:i32, subject:String, recent_update_datetime:NaiveDateTime, open_datetime:NaiveDateTime,  opener:User)->Thread{
         Thread{
             uid:uid,
             subject:subject,
             recent_update_datetime:recent_update_datetime,
-            opener:opener
+            opener:opener,
+            open_datetime:open_datetime
         }
     }
     pub fn get_subject(&self)->&str{
@@ -112,6 +116,9 @@ impl Thread{
     }
     pub fn get_recent_update_datetime(&self)->&NaiveDateTime{
         &self.recent_update_datetime
+    }
+    pub fn get_open_datetime(&self)->&NaiveDateTime{
+        &self.open_datetime
     }
 }
 #[derive(Serialize, Deserialize, Debug)]
