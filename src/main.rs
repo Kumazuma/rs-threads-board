@@ -286,7 +286,8 @@ fn main() {
         .prefer_socket(false)
         .tcp_port(3306);
     let pool = mysql::Pool::new(mysql::Opts::from(builder)).unwrap();
-
+    //let setting:*const _ = &setting;
+    //std::mem::forget(setting);
 	println!("Now listening on localhost:9999");
 	// The `start_server` starts listening forever on the given address.
 	let server = Server::new("0.0.0.0:9999", move |request| {
