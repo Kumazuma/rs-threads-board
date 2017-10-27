@@ -25,6 +25,7 @@ pub trait Model{
      fn add_new_user(&mut self, user:User)->Result<(), ModelError>;
      fn get_thread(&mut self, thread_uid:i32)->Option<Thread>;
      fn add_new_comment(&mut self, thread_uid:i32, user:User, content:String)->Result<(), ModelError>;
+     fn add_thread(&mut self, subject:&String, user:User)->Result<Thread,()>;
      fn get_comments(&mut self, thread_uid:i32)->Option<Vec<Comment>>;
 
 }

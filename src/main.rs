@@ -298,6 +298,7 @@ fn main() {
         };
         //eprintln!("{}",setting.db);
         let mut model = try_or_400!(pool.get_conn());
+        
 router!(request,
     (GET) (/)=>{
         let offset:usize = match request.get_param("offset").unwrap_or(String::from("0")).parse(){
