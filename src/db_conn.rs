@@ -85,7 +85,7 @@ impl Model for mysql::PooledConn {
         return Some(res);
     }
     fn get_comments(&mut self, thread_uid:i32)->Option<Vec<Comment>>{
-        let sql ="SELECT * FROM v_comments WHERE thread_uid = ?";
+        let sql ="SELECT * FROM v_comments WHERE thread_uid = ? ORDER BY write_datetime ASC";
         let params:&[&ToValue] = &[&thread_uid];
         let comments:Vec< _ >  = self.prep_exec(sql,params).unwrap().map(|row|{
             let mut row = row.unwrap();
@@ -137,7 +137,6 @@ impl Model for mysql::PooledConn {
         `created_datetime` DATETIME NOT NULL,
             */
             let params:&[&ToValue] = &[&user.get_uid(), &user.get_nickname(), subject];
-            transaction.prep_exec("INSERT INTO tb_threads (opener_uid, opener_nickname, subject, created_datetime) VALUES (?,?,?,now())",params);
             transaction.prep_exec("INSERT INTO tb_threads (opener_uid, opener_nickname, subject, created_datetime) VALUES (?,?,?,now())",params);
             transaction.prep_exec(r"INSERT INTO tb_comments
                                        (thread_uid, writer_uid, write_datetime, comment)

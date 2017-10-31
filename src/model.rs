@@ -1,6 +1,6 @@
 extern crate chrono;
 extern crate serde_derive;
-extern crate ructe;
+
 extern crate serde;
 extern crate serde_json;
 extern crate crypto;
