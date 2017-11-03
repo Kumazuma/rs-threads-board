@@ -1,0 +1,26 @@
+@* A very simple template with no arguments.  This line is a comment. *@
+@use templates::{default_js_header, default_navbar};
+@use model::Thread;
+@()
+<!DOCTYPE html>
+<html lang="ko">
+        <head>
+            @:default_js_header()
+            <title>Document</title>
+        </head>
+        <body style="padding-top:70px;">
+            @:default_navbar()
+        <section class="container">
+            <form action="./threads" method="POST">
+                <div class="form-group">
+                    <label for="thread-write-subject">제목</label>
+                    <input class="form-control"  id="thread-write-subject" type="text" name="thread-write-subject">
+                </div>
+                <div class="form-group">
+                    <textarea class="form-control" style="min-width: 100%; max-width:100%; width: 100%;" name="thread-write-first-comment"></textarea>
+                </div>
+                <input type="submit" value="작성" class="btn btn-default">
+            </form>
+        </section>
+    </body>
+</html>

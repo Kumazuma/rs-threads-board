@@ -371,6 +371,11 @@ router!(request,
     (POST) (/threads)=>{
         rouille::Response::text("스레드 생성")
     },
+    (GET) (/write)=>{
+        let mut s = Vec::new();
+        templates::thread_create(&mut s).unwrap();
+        rouille::Response::from_data("text/html;charset=utf-8", s)
+    },
     (GET) (/threads/{id:i32})=>{
         let response:Box<Response>;
         if let Some(t) = model.get_thread(id){
