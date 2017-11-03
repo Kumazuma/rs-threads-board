@@ -63,7 +63,7 @@ fn parse_linkmark(text:&[u8])->(&[u8], Vec<u8>){
     msg.extend(b"\">");
     msg.append(&mut contents);
     msg.extend(b"</a>");
-    return (&text[(r.3)+1..], msg);
+    return (&text[(r.1)+1..], msg);
 }
 fn parse_nomark(text:&[u8])->(&[u8], Vec<u8>){
     let mut res = Vec::<u8>::new();
@@ -84,18 +84,30 @@ fn parse_nomark(text:&[u8])->(&[u8], Vec<u8>){
     
     return (&text[1..],vec![b'{']);
 }
-fn parse_strikethrough(text:&[u8])->(&[u8], Vec<u8>){
+fn parse_strikethrough<'a>(text:&'a [u8], tag:&'a [u8])->(&'a[u8], Vec<u8>){
     let mut res = Vec::<u8>::new();
     let mut t = &text[2..];
 
     while t.len() > 0{
         if t.len() >= 2{
-            if &t[..2] == b"~~"{
+            if &t[..2] == tag{
                 let mut msg = Vec::<u8>::new();
                 msg.extend(b"<del>");
                 msg.append(&mut res);
                 msg.extend(b"</del>");
                 return (&t[2..], msg); //(&t[2..], format!("<a href=\"{}\">{}</a>",link, res));
+            }
+            if &t[..2] == b"__"{
+                let mut r = parse_bold(t, &t[..2]);
+                res.append(&mut r.1);
+                t = r.0;
+                continue;
+            }
+            if &t[..2] == b"**"{
+                let mut r = parse_bold(t, &t[..2]);
+                res.append(&mut r.1);
+                t = r.0;
+                continue;
             }
         }
         if &t[..1] == b"["{
@@ -109,9 +121,47 @@ fn parse_strikethrough(text:&[u8])->(&[u8], Vec<u8>){
         t = &t[1..];
     }
     
-    return (&text[1..],vec!(b'~'));
+    return (&text[1..],Vec::from(&tag[..1]));
 }
+fn parse_bold<'a>(text:&'a [u8], tag:&'a [u8])->(&'a[u8], Vec<u8>){
+    let mut res = Vec::<u8>::new();
+    let mut t = &text[2..];
 
+    while t.len() > 0{
+        if t.len() >= 2{
+            if &t[..2] == tag{
+                let mut msg = Vec::<u8>::new();
+                msg.extend(b"<strong>");
+                msg.append(&mut res);
+                msg.extend(b"</strong>");
+                return (&t[2..], msg); //(&t[2..], format!("<a href=\"{}\">{}</a>",link, res));
+            }
+            if &t[..2] == b"~~"{
+                let mut r = parse_strikethrough(t,&t[..2]);
+                res.append(&mut r.1);
+                t = r.0;
+                continue;
+            }
+            if &t[..2] == b"--"{
+                let mut r = parse_strikethrough(t, &t[..2]);
+                res.append(&mut r.1);
+                t = r.0;
+                continue;
+            }
+        }
+        if &t[..1] == b"["{
+            let mut r = parse_linkmark(t);
+            res.append(&mut r.1);
+            t = r.0;
+            continue;
+        }
+
+        res.push(t[0]);
+        t = &t[1..];
+    }
+    
+    return (&text[1..],Vec::from(&tag[..1]));
+}
 fn parse(text:&str)->Vec<u8>{
     let mut res = Vec::<u8>::new();
     let mut t:&[u8] = text.as_bytes();
@@ -129,13 +179,31 @@ fn parse(text:&str)->Vec<u8>{
                 continue;
             }
             if &t[..2] == b"~~"{
-                let mut r = parse_strikethrough(t);
+                let mut r = parse_strikethrough(t, &t[..2]);
+                res.append(&mut r.1);
+                t = r.0;
+                continue;
+            }
+            if &t[..2] == b"--"{
+                let mut r = parse_strikethrough(t, &t[..2]);
                 res.append(&mut r.1);
                 t = r.0;
                 continue;
             }
             if &t[..2] == b"{{"{
                 let mut r = parse_nomark(t);
+                res.append(&mut r.1);
+                t = r.0;
+                continue;
+            }
+            if &t[..2] == b"__"{
+                let mut r = parse_bold(t,&t[..2]);
+                res.append(&mut r.1);
+                t = r.0;
+                continue;
+            }
+            if &t[..2] == b"**"{
+                let mut r = parse_bold(t,&t[..2]);
                 res.append(&mut r.1);
                 t = r.0;
                 continue;
@@ -147,6 +215,7 @@ fn parse(text:&str)->Vec<u8>{
             t = r.0;
             continue;
         }
+        
         let s = match &t[0..1]{
             b"<"=>b"&lt;",
             b">"=>b"&gt;",
@@ -166,11 +235,11 @@ pub struct Markdown{
 impl Markdown{
     pub fn to_html(&self, out: &mut Write) -> Result<(),Error>{
         let text:&str =
-        unsafe{std::mem::transmute::<_, &str>(self.obj)};
+        unsafe{transmute::<_, &str>(self.obj)};
         out.write_all(&parse(text));
         Ok(())
     }
 }
 pub fn render(obj:&str)->Markdown{
-    Raw{obj:obj}
+    Markdown{obj:obj}
 }
