@@ -1,6 +1,6 @@
 @* A very simple template with no arguments.  This line is a comment. *@
 @use model::Comment;
-@use raw_html::raw;
+@use markdown::render;
 @(comments:&Vec<Comment>)
 @for comment in comments{
 <div class="media">
@@ -9,7 +9,7 @@
         <span>@comment.get_user().get_nickname()</span>
     </div>
     <div class="media-body">
-        @raw(comment.get_content())
+        @render(comment.get_content())
         <span class="comment-writed-date">@comment.get_writed_datetime()</span>
     </div>
 </div>

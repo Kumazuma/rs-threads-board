@@ -14,7 +14,7 @@ use std::fs::File;
 use rouille::Server;
 use std::time::Duration;
 mod model;
-mod raw_html;
+mod markdown;
 mod db_conn;
 use model::Model;
 pub trait Response{
