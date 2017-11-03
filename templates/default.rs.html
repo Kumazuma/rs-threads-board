@@ -33,7 +33,7 @@ else{
                         <td>
                             <span class="user">
                                 <img src="@item.get_opener().get_gravatar_url(Some(24))" class="user-gravta">
-                                <span>@item.get_opener().get_nickname()</span>
+                                <span>@item.get_opener().get_nickname()#@item.get_opener().get_uid()</span>
                                 <input type="hidden" value="@item.get_opener().get_uid()">
                             </span>
                         </td>

@@ -101,8 +101,13 @@ section{
 .comment-writed-date{
     position: absolute;
     right:0px;
-    top:0px;
+    bottom:0px;
 }
 #comments-view .media-body{
     position: relative;
+}
+#comment-write-content{
+    max-width: 100%;
+    min-width: 100%;
+    width:100%;
 }

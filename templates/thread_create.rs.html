@@ -7,19 +7,25 @@
         <head>
             @:default_js_header()
             <title>Document</title>
+            <script src="./js/thread_create.js"></script>
         </head>
         <body style="padding-top:70px;">
             @:default_navbar()
         <section class="container">
-            <form action="./threads" method="POST">
+            <form  id="thread-write-form" action="./threads" method="POST">
                 <div class="form-group">
                     <label for="thread-write-subject">제목</label>
-                    <input class="form-control"  id="thread-write-subject" type="text" name="thread-write-subject">
+                    <input class="form-control"  id="thread-write-subject" type="text" name="subject">
                 </div>
                 <div class="form-group">
-                    <textarea class="form-control" style="min-width: 100%; max-width:100%; width: 100%;" name="thread-write-first-comment"></textarea>
+                    <textarea class="form-control" style="min-width: 100%; max-width:100%; width: 100%;" name="comment"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="thread-write-tags">태그</label>
+                    <input class="form-control"  id="thread-write-tags" type="text" name="tags">
                 </div>
                 <input type="submit" value="작성" class="btn btn-default">
+                <input type="hidden" name="token" value="">
             </form>
         </section>
     </body>

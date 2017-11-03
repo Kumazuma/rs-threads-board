@@ -369,7 +369,36 @@ router!(request,
         };
     },
     (POST) (/threads)=>{
-        rouille::Response::text("스레드 생성")
+        let input = try_or_400!(post_input!(request, {
+            token: String,
+            subject: String,
+            tags:String,
+            comment:String
+        }));
+        if let Ok(v) = check_sign(setting, &input.token){
+            eprintln!("{:?}",input);
+            let user:model::User =match model.get_user(model::ConditionUserFind::ByEMail(v.email)){
+                Some(v)=>v,
+                None=>{
+                    eprintln!("model.get_user");
+                    return rouille::Response::empty_404()
+                }
+            };
+            let thread = match model.add_thread(&input.subject,user,&input.comment){
+                Ok(v)=>v,
+                Err(_)=>{
+                    eprintln!("match model.add_thread");
+                    return rouille::Response::empty_404()
+                }
+            };
+            let mut res = Vec::new();
+            use std::io::Write;
+            write!(&mut res,"{{\"redirectURL\":\"/threads/{}\"}}",thread.get_uid());
+            return rouille::Response::from_data("application/json", res);
+        }
+        else{
+            return rouille::Response::empty_404();
+        }
     },
     (GET) (/write)=>{
         let mut s = Vec::new();

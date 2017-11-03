@@ -125,9 +125,7 @@ impl Model for mysql::PooledConn {
         let uid:i32;
         {
             let mut transaction = self.start_transaction(false, Some(IsolationLevel::Serializable), Some(false)).unwrap();
-            let row = transaction.first("SELECT LAST_INSERT_ID() FROM tb_threads").unwrap();
-            let row = row.unwrap();
-            uid = row.get(0).unwrap();
+            
             
             /*
             `uid` INT(11) NOT NULL AUTO_INCREMENT,
@@ -138,18 +136,21 @@ impl Model for mysql::PooledConn {
             */
             let params:&[&ToValue] = &[&user.get_uid(), &user.get_nickname(), subject];
             transaction.prep_exec("INSERT INTO tb_threads (opener_uid, opener_nickname, subject, created_datetime) VALUES (?,?,?,now())",params);
+            let row = transaction.first("SELECT LAST_INSERT_ID() FROM tb_threads").unwrap();
+            let row = row.unwrap();
+            uid = row.get(0).unwrap();
             transaction.prep_exec(r"INSERT INTO tb_comments
                                        (thread_uid, writer_uid, write_datetime, comment)
                                    VALUES
                                        (:thread_uid, :writer_uid, NOW(), :comment)",params!{
-                "thread_uid" => uid + 1,
+                "thread_uid" => uid,
                 "writer_uid" => user.get_uid(),
                 "comment" => first_comment,
             }).unwrap();
             transaction.commit();
             
         }
-        return match self.get_thread(uid + 1){
+        return match self.get_thread(uid){
             Some(v)=>Ok(v),
             None=>Err(())
         };

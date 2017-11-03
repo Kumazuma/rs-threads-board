@@ -6,7 +6,7 @@
 <div class="media">
     <div class="media-left media-middle">
         <img class="media-object" src="@comment.get_user().get_gravatar_url(Some(64))">
-        <span>@comment.get_user().get_nickname()</span>
+        <span>@comment.get_user().get_nickname()#@comment.get_user().get_uid()</span>
     </div>
     <div class="media-body">
         @render(comment.get_content())
