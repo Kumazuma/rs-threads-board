@@ -85,7 +85,7 @@ impl Model for mysql::PooledConn {
         return Some(res);
     }
     fn get_comments(&mut self, thread_uid:i32)->Option<Vec<Comment>>{
-        let sql ="SELECT * FROM v_comments WHERE thread_uid = ? ORDER BY write_datetime ASC";
+        let sql ="SELECT * FROM v_comments WHERE thread_uid = ?";
         let params:&[&ToValue] = &[&thread_uid];
         let comments:Vec< _ >  = self.prep_exec(sql,params).unwrap().map(|row|{
             let mut row = row.unwrap();
