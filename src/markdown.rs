@@ -162,12 +162,21 @@ fn parse_bold<'a>(text:&'a [u8], tag:&'a [u8])->(&'a[u8], Vec<u8>){
     
     return (&text[1..],Vec::from(&tag[..1]));
 }
+fn parse_blackqoute(text:&[u8])->(&[u8], Vec<u8>){
+    let mut t = text;
+    let mut html = Vec::<u8>::new();
+    return (t, html);
+}
 fn parse(text:&str)->Vec<u8>{
     let mut res = Vec::<u8>::new();
     let mut t:&[u8] = text.as_bytes();
     res.extend(b"<p>");
     while t.len() != 0{
         if t.len() > 2{
+            if (t.len() == text.as_bytes().len() && &t[..1] == b">") ||
+            &t[..2] == b"\n>"{
+
+            }
             if &t[..2] == b"\n\n"{
                 res.extend(b"</p><p>");
                 t = &t[2..];
