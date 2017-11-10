@@ -111,7 +111,12 @@ fn parse_strikethrough<'a>(text:&'a [u8], tag:&'a [u8])->(&'a[u8], Vec<u8>){
             continue;
         }
 
-        res.push(t[0]);
+        let s = match &t[0..1]{
+            b"<"=>b"&lt;",
+            b">"=>b"&gt;",
+            c@_=>c
+        } ;
+        res.extend(s);
         t = &t[1..];
     }
     
@@ -150,7 +155,12 @@ fn parse_bold<'a>(text:&'a [u8], tag:&'a [u8])->(&'a[u8], Vec<u8>){
             continue;
         }
 
-        res.push(t[0]);
+        let s = match &t[0..1]{
+            b"<"=>b"&lt;",
+            b">"=>b"&gt;",
+            c@_=>c
+        } ;
+        res.extend(s);
         t = &t[1..];
     }
     
