@@ -301,13 +301,13 @@ fn main() {
         let mut model = try_or_400!(pool.get_conn());
 router!(request,
     (GET) (/)=>{
-        let offset:usize = match request.get_param("offset").unwrap_or(String::from("0")).parse(){
-            Ok(v)=>v,
-            Err( _ )=>0usize
+        let offset:usize = match request.get_param("offset"){
+            Some(v)=>v.parse().unwrap_or(0usize),
+            None=>0usize
         };
-        let count:usize = match request.get_param("offset").unwrap_or(String::from("25")).parse(){
-            Ok(v)=>v,
-            Err( _ )=>25usize
+        let count:usize = match request.get_param("count"){
+            Some(v)=>v.parse().unwrap_or(25usize),
+            None=>25usize
         };
         let list = model.get_threads_list(offset,count);
         let mut s = Vec::new();
@@ -316,13 +316,13 @@ router!(request,
         rouille::Response::from_data("text/html;charset=utf-8", s)
     },
     (GET) (/threads)=>{
-        let offset:usize = match request.get_param("offset").unwrap_or(String::from("0")).parse(){
-            Ok(v)=>v,
-            Err( _ )=>0usize
+        let offset:usize = match request.get_param("offset"){
+            Some(v)=>v.parse().unwrap_or(0usize),
+            None=>0usize
         };
-        let count:usize = match request.get_param("offset").unwrap_or(String::from("25")).parse(){
-            Ok(v)=>v,
-            Err( _ )=>25usize
+        let count:usize = match request.get_param("count"){
+            Some(v)=>v.parse().unwrap_or(25usize),
+            None=>25usize
         };
         let list = model.get_threads_list(offset,count);
         return match check_accept_type(request){
@@ -392,9 +392,10 @@ router!(request,
                     return rouille::Response::empty_404()
                 }
             };
-            for it in input.tags.split(','){
+            for it in input.tags.split(',').filter(|it|it.len() != 0){
                 use model::Tag;
                 use db_conn::*;
+                
                 let mut tag = Tag::new(String::from(it.trim()), Vec::new());
                 tag.put(&mut model, &thread);
             }
@@ -496,7 +497,8 @@ router!(request,
         return rouille::Response::from_data(content_type, data);
     },
     (GET) (/tags)=>{
-        let tags = thread_n_tag::get_tags(&mut model);
+
+        //let tags = thread_n_tag::get_tags(&mut model);
         let mut buffer = Vec::new();
         templates::tags(&mut buffer);
         return rouille::Response::from_data("text/html;charset=utf-8", buffer);
@@ -563,6 +565,11 @@ router!(request,
             ResponseContentType::Html=>rouille::Response::empty_404(),
         };
     },
+    (GET) (/profile)=>{
+        let mut s = Vec::new();
+        templates::profile(&mut s).unwrap();
+        rouille::Response::from_data("text/html; charset=utf-8", s)
+    },
     (GET) (/users/{user_name:String})=>{
         eprint!("{}",user_name);
         rouille::Response::text("회원 정보")
@@ -584,7 +591,7 @@ router!(request,
             rouille::Response::empty_404()
         }
     },
-    (GET) (/font/{font:String}) =>{
+    (GET) (/fonts/{font:String}) =>{
         let font_path = Path::new("./font").join(font);
         //println!("{:?}",font_path.as_path());
         if let Ok(file) = File::open(font_path){
