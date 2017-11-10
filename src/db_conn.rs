@@ -157,3 +157,41 @@ impl Model for mysql::PooledConn {
     }
     // add code here
 }
+
+pub trait TagController{
+    fn get(model:&mut mysql::PooledConn, name:&str)->Tag;
+    fn put(&mut self,model:&mut mysql::PooledConn, thread:&Thread);
+    fn delete(&mut self,model:&mut mysql::PooledConn, thread:&Thread);
+}
+impl TagController for Tag{
+    
+    fn get(model:&mut mysql::PooledConn, name:&str)->Tag{
+        let sql = "SELECT thread_uid FROM tb_tags where tag_name=?";
+        let params:&[&ToValue] = &[&name];
+
+        let mut threads:Vec<Thread> = Vec::new();
+        let thread_uids:Vec<i32> = 
+        model.prep_exec(sql,params).unwrap().map(|row|{
+            let row = row.unwrap();
+            return row.get(0).unwrap();
+        }).collect();
+        //.into_iter()
+        for uid in thread_uids{
+            threads.push(match model.get_thread(uid){
+                Some(v)=>v,
+                None=>continue
+            });
+        }
+        return Tag::new(name.to_string(), threads);
+    }
+    fn put(&mut self,model:&mut mysql::PooledConn, thread:&Thread){
+        let sql = "INSERT INTO tb_tags VALUES (?, ?)";
+        let param:&[&ToValue] = &[self.get_name(), &thread.get_uid()];
+        model.prep_exec(sql, param).unwrap();
+    }
+    fn delete(&mut self,model:&mut mysql::PooledConn, thread:&Thread){
+        let sql = "DELETE FROM tb_tags WHERE thread_uid = ?";
+        let param:&[&ToValue] = &[&thread.get_uid()];
+        model.prep_exec(sql, param).unwrap();
+    }
+}

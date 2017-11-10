@@ -16,6 +16,7 @@ use std::time::Duration;
 mod model;
 mod markdown;
 mod db_conn;
+mod thread_n_tag;
 use model::Model;
 pub trait Response{
     fn get_response(&self, request:&rouille::Request)->rouille::Response;
@@ -391,6 +392,13 @@ router!(request,
                     return rouille::Response::empty_404()
                 }
             };
+            for it in input.tags.split(','){
+                use model::Tag;
+                use db_conn::*;
+                let mut tag = Tag::new(String::from(it.trim()), Vec::new());
+                tag.put(&mut model, &thread);
+            }
+            
             let mut res = Vec::new();
             use std::io::Write;
             write!(&mut res,"{{\"redirectURL\":\"/threads/{}\"}}",thread.get_uid());
@@ -447,32 +455,80 @@ router!(request,
         let v:Vec<u8> =b"{}".to_vec();
         rouille::Response::from_data("application/json", v)
     },
-    (GET) (/threads/{id:String}/comments/{c_id:String})=>{
+    (GET) (/threads/{id:i32}/comments/{c_id:String})=>{
         eprint!("{}, {}",id, c_id);
         rouille::Response::text("코멘트 정보 뷰")
     },
-    (PUT) (/threads/{id:String}/comments/{c_id:String})=>{
+    (PUT) (/threads/{id:i32}/comments/{c_id:String})=>{
         eprint!("{}, {}",id, c_id);
         rouille::Response::text("코멘트 수정")
     },
-    (DELETE) (/threads/{id:String}/comments/{c_id:String})=>{
+    (DELETE) (/threads/{id:i32}/comments/{c_id:String})=>{
         eprint!("{}, {}",id, c_id);
         rouille::Response::text("코멘트 삭제")
     },
-    (POST) (/threads/{id:String}/comments/{c_id:String}/thumbsup)=>{
+    (POST) (/threads/{id:i32}/comments/{c_id:String}/thumbsup)=>{
         eprint!("{}, {}",id, c_id);
         rouille::Response::text("코멘트 추천")
     },
-    (POST) (/threads/{id:String}/comments/{c_id:String}/thumbsdown)=>{
+    (POST) (/threads/{id:i32}/comments/{c_id:String}/thumbsdown)=>{
         eprint!("{}, {}",id, c_id);
         rouille::Response::text("코멘트 추천")
+    },
+    (GET) (/threads/{id:i32}/tags)=>{
+        let thread = match model.get_thread(id){
+            Some(v)=>v,
+            None=>return rouille::Response::empty_404()
+        };
+        let tags = thread_n_tag::get_tags_in_thread(&mut model, &thread);
+        let (content_type, data) = match check_accept_type(request){
+            ResponseContentType::Html|ResponseContentType::Xml=>{
+                let mut buffer = Vec::new();
+                templates::format_thread_tags(&mut buffer, &tags);
+                ("text/html;charset=utf-8", buffer)
+            },
+            ResponseContentType::Json=>{
+                let buffer = 
+                serde_json::to_vec(&tags).unwrap();
+                ("application/json", buffer)
+            }
+        };
+        return rouille::Response::from_data(content_type, data);
     },
     (GET) (/tags)=>{
-        rouille::Response::text("태그 리스트")
+        let tags = thread_n_tag::get_tags(&mut model);
+        let (content_type, data) = match check_accept_type(request){
+            ResponseContentType::Html|ResponseContentType::Xml=>{
+                let mut buffer = Vec::new();
+                templates::tags(&mut buffer, &tags);
+                ("text/html;charset=utf-8", buffer)
+            },
+            ResponseContentType::Json=>{
+                let buffer = 
+                serde_json::to_vec(&tags).unwrap();
+                ("application/json", buffer)
+            }
+        };
+        return rouille::Response::from_data(content_type, data);
     },
-    (GET) (/tags/{tag:String}/threads)=>{
+    (GET) (/tags/{tag:String})=>{
         eprint!("{}",tag);
-        rouille::Response::text("태그가 붙여진 스레드 리스트")
+        use model::Tag;
+        use db_conn::*;
+        let tag = Tag::get(&mut model, &tag);
+        let (content_type, data) = match check_accept_type(request){
+            ResponseContentType::Html|ResponseContentType::Xml=>{
+                let mut buffer = Vec::new();
+                templates::tag_thread_list(&mut buffer, tag.get_threads());
+                ("text/html;charset=utf-8", buffer)
+            },
+            ResponseContentType::Json=>{
+                let buffer = 
+                serde_json::to_vec(&tag).unwrap();
+                ("application/json", buffer)
+            }
+        };
+        return rouille::Response::from_data(content_type, data);
     },
     (GET) (/signup)=>{
         let mut s = Vec::new();
@@ -525,15 +581,8 @@ router!(request,
         eprint!("{}",user_name);
         rouille::Response::text("회원정보 수정")
     },
-    (GET) (/login)=>{
-        rouille::Response::text("로그인 폼")
-    },
     (POST) (/login)=>{
         sign_in(setting, request,&mut model).get_response(&request)
-    },
-    (POST) (/logout)=>{
-        //eprint!("{}",user_name);
-        rouille::Response::text("로그아웃")
     },
     (GET) (/css/{css:String}) =>{
         let css_path = Path::new("./css").join(css);

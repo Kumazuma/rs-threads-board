@@ -1,0 +1,8 @@
+@use model::Tag;
+@use markdown::render;
+@(tags:&Vec<Tag>)
+<ul class="tags">
+@for tag in tags{
+    <li><a href="/tags/@tag.get_name()">@tag.get_name()</a></li>
+}
+</ul>

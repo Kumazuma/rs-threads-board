@@ -162,3 +162,22 @@ impl User {
         }
     }
 }
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Tag{
+    name:String,
+    threads:Vec<Thread>
+}
+impl Tag{
+    pub fn new(name:String, threads:Vec<Thread>)->Tag{
+        return Tag{
+            name:name,
+            threads:threads
+        };
+    }
+    pub fn get_name(&self)->&String{
+        return &self.name;
+    }
+    pub fn get_threads(&self)->&Vec<Thread>{
+        return &self.threads;
+    }
+}

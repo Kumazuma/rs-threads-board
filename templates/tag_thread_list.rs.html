@@ -1,0 +1,45 @@
+@* A very simple template with no arguments.  This line is a comment. *@
+@use model::Thread;
+@use templates::{default_js_header, default_navbar};
+@(list:&Vec<Thread>)
+<!DOCTYPE html>
+<html lang="ko">
+    <head>
+        @:default_js_header()
+        <title>Document</title>
+    </head>
+    <body style="padding-top:70px;">
+        @:default_navbar()
+        <section class="container">
+@if list.len() == 0{
+            <span>스레드가 없습니다.</span>
+}
+else{
+            <table id="thread-list" class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>주제</th>
+                        <th>개시자</th>
+                        <th>마지막 갱신</th>
+                    </tr>
+                </thead>
+                <tbody>
+@for item in list{
+                    <tr>
+                        <td><a href="/threads/@item.get_uid()">@item.get_subject()</a></td>
+                        <td>
+                            <span class="user">
+                                <img src="@item.get_opener().get_gravatar_url(Some(24))" class="user-gravta">
+                                <span>@item.get_opener().get_nickname()#@item.get_opener().get_uid()</span>
+                                <input type="hidden" value="@item.get_opener().get_uid()">
+                            </span>
+                        </td>
+                        <td>@item.get_recent_update_datetime()</td>
+                    </tr>
+    }
+}
+                </tbody>
+            </table>
+        </section>
+    </body>
+</html>
