@@ -1,3 +1,13 @@
+let offset = 0;
+function getToken(){
+    return document.cookie.replace(/(?:(?:^|.*;\s*)token\s*\=\s*([^;]*).*$)|^.*$/, "$1");
+}
+function getNickname(){
+    return document.cookie.replace(/(?:(?:^|.*;\s*)nickname\s*\=\s*([^;]*).*$)|^.*$/, "$1");
+}
+function getGravatar(){
+    return document.cookie.replace(/(?:(?:^|.*;\s*)gravatar\s*\=\s*([^;]*).*$)|^.*$/, "$1");
+}
 function checkSignin(){
     let nickname = document.cookie.replace(/(?:(?:^|.*;\s*)nickname\s*\=\s*([^;]*).*$)|^.*$/, "$1");
     let token = document.cookie.replace(/(?:(?:^|.*;\s*)token\s*\=\s*([^;]*).*$)|^.*$/, "$1");
@@ -83,5 +93,8 @@ $(document).ready(()=>{
             });
         }
         e.preventDefault();
+    });
+    $("#more-threads").on("click",(e)=>{
+
     });
 });
