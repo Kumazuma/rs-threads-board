@@ -1,11 +1,5 @@
 extern crate ructe;
 extern crate core;
-use self::ructe::templates::ToHtml;
-use self::core::fmt::Display;
-use std::io::{Write,Error};
-use std::mem::transmute;
-
-use std::collections::HashMap as Dict;
 fn parse_linkmark(text:&[u8])->(&[u8], Vec<u8>){
     
     let mut contents:Option<(usize, usize)> = None;
@@ -241,6 +235,8 @@ fn parse(text:&str)->Vec<u8>{
 pub struct Markdown{
     obj:*const str
 }
+use std::io::{Write,Error};
+use std::mem::transmute;
 impl Markdown{
     pub fn to_html(&self, out: &mut Write) -> Result<(),Error>{
         let text:&str =

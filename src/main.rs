@@ -497,19 +497,9 @@ router!(request,
     },
     (GET) (/tags)=>{
         let tags = thread_n_tag::get_tags(&mut model);
-        let (content_type, data) = match check_accept_type(request){
-            ResponseContentType::Html|ResponseContentType::Xml=>{
-                let mut buffer = Vec::new();
-                templates::tags(&mut buffer, &tags);
-                ("text/html;charset=utf-8", buffer)
-            },
-            ResponseContentType::Json=>{
-                let buffer = 
-                serde_json::to_vec(&tags).unwrap();
-                ("application/json", buffer)
-            }
-        };
-        return rouille::Response::from_data(content_type, data);
+        let mut buffer = Vec::new();
+        templates::tags(&mut buffer);
+        return rouille::Response::from_data("text/html;charset=utf-8", buffer);
     },
     (GET) (/tags/{tag:String})=>{
         eprint!("{}",tag);
