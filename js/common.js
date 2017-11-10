@@ -6,6 +6,8 @@ function checkSignin(){
         $("#sign-in-form").css("display","none");
         $("#user-info").css("display","");
         $("#user-gravatar").attr("src",gravatar.replace("s=24","s=34"));
+        $("#user-nickname").text(nickname);
+        
     }
 }
 function signout(){
