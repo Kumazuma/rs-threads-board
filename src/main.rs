@@ -581,6 +581,12 @@ router!(request,
     (POST) (/login)=>{
         sign_in(setting, request,&mut model).get_response(&request)
     },
+    (GET) (/search/bytag)=>{
+        rouille::Response::empty_404()
+    },
+    (GET) (/search/bythread)=>{
+        rouille::Response::empty_404()
+    },
     (GET) (/css/{css:String}) =>{
         let css_path = Path::new("./css").join(css);
         //println!("{:?}",css_path.as_path());
