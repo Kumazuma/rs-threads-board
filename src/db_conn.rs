@@ -167,13 +167,14 @@ pub trait TagController{
 impl TagController for Tag{
 
     fn get(model:&mut mysql::PooledConn, name:&str)->Tag{
-        let sql = "SELECT thread_uid FROM tb_tags where tag_name=?";
+        let sql = "SELECT thread_uid FROM v_tags where tag_name=?";
         let params:&[&ToValue] = &[&name];
 
         let mut threads:Vec<Thread> = Vec::new();
         let thread_uids:Vec<i32> = 
         model.prep_exec(sql,params).unwrap().map(|row|{
             let row = row.unwrap();
+            eprintln!("{:?}",row);
             return row.get(0).unwrap();
         }).collect();
         //.into_iter()
@@ -197,13 +198,20 @@ impl TagController for Tag{
     }
 }
 pub trait ThreadModel{
-    fn search(model:&mut mysql::PooledConn ,subject:&str)->Vec<Thread>;
+    fn list(model:&mut mysql::PooledConn ,mut q: Option<String>, offset:usize, count:usize)->Vec<Thread>;
 }
 impl ThreadModel for Thread{
-    fn search(model:&mut mysql::PooledConn ,subject:&str)->Vec<Thread>{
-        let sql =format!("SELECT * FROM v_thread_list WHERE subject like ?");
-        let params:&[&ToValue] = &[&format!("%{}%", subject)];
-        return model.prep_exec(sql,params).unwrap().map(|row|{
+    fn list(model:&mut mysql::PooledConn ,mut q: Option<String>, offset:usize, count:usize)->Vec<Thread>{
+        //let sql =format!("SELECT * FROM v_thread_list WHERE subject like ?");
+        let mut sql = String::from("SELECT * FROM v_thread_list ");
+        use std::fmt::{Error, Write};
+        return if let Some(ref mut q) = q{
+            let t = format!("%{}%", q);
+            let params:&[&ToValue]= &[&t];
+            sql.push_str("WHERE subject LIKE ? ");
+
+            write!(&mut sql, "LIMIT {}, {}", offset, count);
+            model.prep_exec(sql,params).unwrap().map(|row|{
             let mut row = row.unwrap();
             Thread::new(
                 row.take("uid").expect("uid"),
@@ -217,6 +225,26 @@ impl ThreadModel for Thread{
                     None
                 )
             )
-        }).collect();
+            }).collect()
+        }
+        else{
+            let params:&[&ToValue] = &[];
+            write!(&mut sql, "LIMIT {}, {}", offset, count);
+            model.prep_exec(sql,params).unwrap().map(|row|{
+            let mut row = row.unwrap();
+            Thread::new(
+                row.take("uid").expect("uid"),
+                row.take("subject").expect("uid"),
+                row.take("recent_update").expect("recent_update"),
+                row.take("created_datetime").expect("created_datetime"),
+                User::new(
+                    row.take("opener_uid").expect("opener_uid"),
+                    row.take("opener_nickname").expect("opener_nickname"),
+                    row.take("opener_email").expect("opener_email"),
+                    None
+                )
+            )
+            }).collect()
+        };
     }
 }

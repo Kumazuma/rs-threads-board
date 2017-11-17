@@ -11,6 +11,13 @@
     <body style="padding-top:70px;">
         @:default_navbar()
         <section class="container">
+            <header>
+                <form id="tag-query" method="GET">
+                    <input class="form-control" type="search" name="q" placeholder="tag name">
+                    <input class="form-control" type="hidden" name="by" value="tag">
+                    <input class="form-control" type="submit" value="검색">
+                </form>
+            </header>
 @if list.len() == 0{
             <span>스레드가 없습니다.</span>
 }

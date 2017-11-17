@@ -301,6 +301,7 @@ fn main() {
         let mut model = try_or_400!(pool.get_conn());
 router!(request,
     (GET) (/)=>{
+        let q:Option<String> = request.get_param("q");
         let offset:usize = match request.get_param("offset"){
             Some(v)=>v.parse().unwrap_or(0usize),
             None=>0usize
@@ -309,22 +310,8 @@ router!(request,
             Some(v)=>v.parse().unwrap_or(25usize),
             None=>25usize
         };
-        let list = model.get_threads_list(offset,count);
-        let mut s = Vec::new();
-        
-        templates::default(&mut s,list).unwrap();
-        rouille::Response::from_data("text/html;charset=utf-8", s)
-    },
-    (GET) (/threads)=>{
-        let offset:usize = match request.get_param("offset"){
-            Some(v)=>v.parse().unwrap_or(0usize),
-            None=>0usize
-        };
-        let count:usize = match request.get_param("count"){
-            Some(v)=>v.parse().unwrap_or(25usize),
-            None=>25usize
-        };
-        let list = model.get_threads_list(offset,count);
+        use db_conn::ThreadModel;
+        let list = model::Thread::list(&mut model, q, offset,count);
         return match check_accept_type(request){
             ResponseContentType::Json=>{
                 let v = try_or_400!(serde_json::to_vec(&list));
@@ -342,16 +329,18 @@ router!(request,
             }
         };
     },
-    (GET) (/threads/)=>{
-        let offset:usize = match request.get_param("offset").unwrap_or(String::from("0")).parse(){
-            Ok(v)=>v,
-            Err( _ )=>0usize
+    (GET) (/threads)=>{
+        let q:Option<String> = request.get_param("q");
+        let offset:usize = match request.get_param("offset"){
+            Some(v)=>v.parse().unwrap_or(0usize),
+            None=>0usize
         };
-        let count:usize = match request.get_param("offset").unwrap_or(String::from("25")).parse(){
-            Ok(v)=>v,
-            Err( _ )=>25usize
+        let count:usize = match request.get_param("count"){
+            Some(v)=>v.parse().unwrap_or(25usize),
+            None=>25usize
         };
-        let list = model.get_threads_list(offset,count);
+        use db_conn::ThreadModel;
+        let list = model::Thread::list(&mut model, q, offset,count);
         return match check_accept_type(request){
             ResponseContentType::Json=>{
                 let v = try_or_400!(serde_json::to_vec(&list));
@@ -424,7 +413,6 @@ router!(request,
         }
         response.get_response(request)
     },
-    (GET) (/threads/{id:i32}/)=>{let id = id;rouille::Response::empty_404()},
     (DELETE) (/threads/{id:String})=>{
         eprint!("{}",id);
         rouille::Response::text("스레드 삭제")
@@ -497,7 +485,6 @@ router!(request,
         return rouille::Response::from_data(content_type, data);
     },
     (GET) (/tags)=>{
-
         //let tags = thread_n_tag::get_tags(&mut model);
         let mut buffer = Vec::new();
         templates::tags(&mut buffer);

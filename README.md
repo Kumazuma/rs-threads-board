@@ -68,3 +68,8 @@ JOIN tb_users ON tb_comments.writer_uid = tb_users.uid ORDER BY write_datetime A
 ```sql
 SELECT tag_name, COUNT(*) FROM tb_tags GROUP BY tag_name 
 ```
+
+### v_tags
+```SQL
+SELECT tb_tags.tag_name, tb_tags.thread_uid, v_thread_list.recent_update FROM tb_tags JOIN v_thread_list ON tb_tags.thread_uid = v_thread_list.uid ORDER BY recent_update ASC 
+```

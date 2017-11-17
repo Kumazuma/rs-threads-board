@@ -97,4 +97,9 @@ $(document).ready(()=>{
     $("#more-threads").on("click",(e)=>{
 
     });
+    $("#tag-query").on("submit",(e)=>{
+        let tag = $("#tag-query input[name='q']").val();
+        document.location = `/tags/${tag}`;
+        e.preventDefault();
+    });
 });
