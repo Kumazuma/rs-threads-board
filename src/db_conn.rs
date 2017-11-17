@@ -162,9 +162,10 @@ pub trait TagController{
     fn get(model:&mut mysql::PooledConn, name:&str)->Tag;
     fn put(&mut self,model:&mut mysql::PooledConn, thread:&Thread);
     fn delete(&mut self,model:&mut mysql::PooledConn, thread:&Thread);
+    
 }
 impl TagController for Tag{
-    
+
     fn get(model:&mut mysql::PooledConn, name:&str)->Tag{
         let sql = "SELECT thread_uid FROM tb_tags where tag_name=?";
         let params:&[&ToValue] = &[&name];
@@ -182,7 +183,7 @@ impl TagController for Tag{
                 None=>continue
             });
         }
-        return Tag::new(name.to_string(), threads);
+        return Tag::new(name.to_string()).with_threads(threads);
     }
     fn put(&mut self,model:&mut mysql::PooledConn, thread:&Thread){
         let sql = "INSERT INTO tb_tags VALUES (?, ?)";
@@ -193,5 +194,29 @@ impl TagController for Tag{
         let sql = "DELETE FROM tb_tags WHERE thread_uid = ?";
         let param:&[&ToValue] = &[&thread.get_uid()];
         model.prep_exec(sql, param).unwrap();
+    }
+}
+pub trait ThreadModel{
+    fn search(model:&mut mysql::PooledConn ,subject:&str)->Vec<Thread>;
+}
+impl ThreadModel for Thread{
+    fn search(model:&mut mysql::PooledConn ,subject:&str)->Vec<Thread>{
+        let sql =format!("SELECT * FROM v_thread_list WHERE subject like ?");
+        let params:&[&ToValue] = &[&format!("%{}%", subject)];
+        return model.prep_exec(sql,params).unwrap().map(|row|{
+            let mut row = row.unwrap();
+            Thread::new(
+                row.take("uid").expect("uid"),
+                row.take("subject").expect("uid"),
+                row.take("recent_update").expect("recent_update"),
+                row.take("created_datetime").expect("created_datetime"),
+                User::new(
+                    row.take("opener_uid").expect("opener_uid"),
+                    row.take("opener_nickname").expect("opener_nickname"),
+                    row.take("opener_email").expect("opener_email"),
+                    None
+                )
+            )
+        }).collect();
     }
 }

@@ -165,19 +165,23 @@ impl User {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Tag{
     name:String,
-    threads:Vec<Thread>
+    threads:Option<Vec<Thread>>
 }
 impl Tag{
-    pub fn new(name:String, threads:Vec<Thread>)->Tag{
+    pub fn new(name:String)->Tag{
         return Tag{
             name:name,
-            threads:threads
+            threads:None
         };
+    }
+    pub fn with_threads(mut self, threads:Vec<Thread>)->Self{
+        self.threads = Some(threads);
+        return self;
     }
     pub fn get_name(&self)->&String{
         return &self.name;
     }
-    pub fn get_threads(&self)->&Vec<Thread>{
+    pub fn get_threads(&self)->&Option<Vec<Thread>>{
         return &self.threads;
     }
 }

@@ -10,7 +10,7 @@ pub fn get_tags_in_thread(model: &mut mysql::PooledConn, thread:&Thread)->Vec<Ta
 
     return model.prep_exec(sql,params).unwrap().map(|row|{
         let row = row.unwrap();
-        return Tag::new(row.get(0).unwrap(), Vec::new());
+        return Tag::new(row.get(0).unwrap());
     }).collect();
 }
 pub fn get_tags(model: &mut mysql::PooledConn)->Vec<Tag>{
@@ -19,6 +19,6 @@ pub fn get_tags(model: &mut mysql::PooledConn)->Vec<Tag>{
 
     return model.prep_exec(sql,params).unwrap().map(|row|{
         let row = row.unwrap();
-        return Tag::new(row.get(0).unwrap(), Vec::new());
+        return Tag::new(row.get(0).unwrap());
     }).collect();
 }
