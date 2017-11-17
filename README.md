@@ -4,9 +4,9 @@
 ```sql
 CREATE TABLE `tb_users` (
 	`uid` INT(11) NOT NULL AUTO_INCREMENT,
-	`email` VARCHAR(32) NOT NULL DEFAULT '0',
-	`nickname` VARCHAR(32) NOT NULL DEFAULT '0',
-	`password` VARCHAR(128) NOT NULL DEFAULT '0',
+	`email` VARCHAR(32) NOT NULL,
+	`nickname` VARCHAR(32) NOT NULL,
+	`password` VARCHAR(128) NOT NULL ,
 	PRIMARY KEY (`uid`),
 	UNIQUE INDEX `email` (`email`)
 );
@@ -15,7 +15,7 @@ CREATE TABLE `tb_users` (
 ```sql
 CREATE TABLE `tb_threads` (
 	`uid` INT(11) NOT NULL AUTO_INCREMENT,
-	`opener_uid` INT(11) NOT NULL DEFAULT '0',
+	`opener_uid` INT(11) NOT NULL,
 	`opener_nickname` VARCHAR(32) NOT NULL,
 	`subject` VARCHAR(64) NOT NULL COLLATE 'utf8mb4_unicode_ci',
 	`created_datetime` DATETIME NOT NULL,
@@ -71,5 +71,5 @@ SELECT tag_name, COUNT(*) FROM tb_tags GROUP BY tag_name
 
 ### v_tags
 ```SQL
-SELECT tb_tags.tag_name, tb_tags.thread_uid, v_thread_list.recent_update FROM tb_tags JOIN v_thread_list ON tb_tags.thread_uid = v_thread_list.uid ORDER BY recent_update ASC 
+SELECT tb_tags.tag_name, tb_tags.thread_uid, v_thread_list.recent_update FROM tb_tags JOIN v_thread_list ON tb_tags.thread_uid = v_thread_list.uid ORDER BY recent_update DESC 
 ```

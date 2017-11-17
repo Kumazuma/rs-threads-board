@@ -162,27 +162,46 @@ impl User {
         }
     }
 }
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Tag{
     name:String,
-    threads:Option<Vec<Thread>>
+    threads:Option<Vec<Thread>>,
+    thread_count:Option<usize>
 }
 impl Tag{
     pub fn new(name:String)->Tag{
         return Tag{
             name:name,
-            threads:None
+            threads:None,
+            thread_count:None
         };
     }
     pub fn with_threads(mut self, threads:Vec<Thread>)->Self{
         self.threads = Some(threads);
         return self;
     }
+    pub fn with_thread_count(mut self, count:usize)->Self{
+        self.thread_count = Some(count);
+        return self;
+    }
+    
     pub fn get_name(&self)->&String{
         return &self.name;
     }
     pub fn get_threads(&self)->&Option<Vec<Thread>>{
         return &self.threads;
+    }
+    pub fn get_thread_count(&self)->usize{
+        if let Some(v) = self.thread_count{
+            return v;
+        }
+        else if let Some(ref v) =self.threads{
+            return v.len();
+        }
+        else{
+            return 0;
+        }
     }
 }
 

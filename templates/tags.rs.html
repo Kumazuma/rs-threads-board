@@ -1,5 +1,6 @@
 @use templates::{default_js_header, default_navbar};
-@()
+@use model::Tag;
+@(tags:Vec<Tag>)
 <!DOCTYPE html>
 <html lang="ko">
     <head>
@@ -10,14 +11,17 @@
         @:default_navbar()
         <section class="container">
             <header>
-                <form id="tag-query" method="GET">
+                <form action="/tags" method="GET">
                     <input class="form-control" type="search" name="q" placeholder="tag name">
-                    <input class="form-control" type="hidden" name="by" value="tag">
                     <input class="form-control" type="submit" value="검색">
                 </form>
             </header>
             <article>
-
+<ul>
+@for tag in tags{
+    <li><a href="/tags/@tag.get_name()">@tag.get_name() (@tag.get_thread_count())</a></li>
+}
+</ul>
             </article>
         </section>
     </body>

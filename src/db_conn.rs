@@ -162,10 +162,20 @@ pub trait TagController{
     fn get(model:&mut mysql::PooledConn, name:&str)->Tag;
     fn put(&mut self,model:&mut mysql::PooledConn, thread:&Thread);
     fn delete(&mut self,model:&mut mysql::PooledConn, thread:&Thread);
-    
+    fn list(model:&mut mysql::PooledConn, q:&str)->Vec<Tag>;
 }
 impl TagController for Tag{
+    fn list(model:&mut mysql::PooledConn, q:&str)->Vec<Tag>{
+        let sql = "SELECT * FROM v_tag_threads_count_list where tag_name LIKE ?";
+        let params:&[&ToValue] = &[&format!("%{}%", q)];
 
+        let mut threads:Vec<Thread> = Vec::new();
+        //let thread_uids:Vec<i32> = 
+        model.prep_exec(sql,params).unwrap().map(|row|{
+            let row = row.unwrap();
+            return Tag::new(row.get(0).unwrap()).with_thread_count(row.get(1).unwrap());
+        }).collect()
+    }
     fn get(model:&mut mysql::PooledConn, name:&str)->Tag{
         let sql = "SELECT thread_uid FROM v_tags where tag_name=?";
         let params:&[&ToValue] = &[&name];
@@ -174,7 +184,7 @@ impl TagController for Tag{
         let thread_uids:Vec<i32> = 
         model.prep_exec(sql,params).unwrap().map(|row|{
             let row = row.unwrap();
-            eprintln!("{:?}",row);
+            //eprintln!("{:?}",row);
             return row.get(0).unwrap();
         }).collect();
         //.into_iter()

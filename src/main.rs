@@ -366,7 +366,7 @@ router!(request,
             comment:String
         }));
         if let Ok(v) = check_sign(setting, &input.token){
-            eprintln!("{:?}",input);
+            //eprintln!("{:?}",input);
             let user:model::User =match model.get_user(model::ConditionUserFind::ByEMail(v.email)){
                 Some(v)=>v,
                 None=>{
@@ -487,11 +487,16 @@ router!(request,
     (GET) (/tags)=>{
         //let tags = thread_n_tag::get_tags(&mut model);
         let mut buffer = Vec::new();
-        templates::tags(&mut buffer);
+        use db_conn::TagController;
+        let tag_list = match request.get_param("q"){
+            Some(v)=>model::Tag::list(&mut model, &v),
+            None=>Vec::new()
+        };
+        templates::tags(&mut buffer,tag_list);
         return rouille::Response::from_data("text/html;charset=utf-8", buffer);
     },
     (GET) (/tags/{tag:String})=>{
-        eprint!("{}",tag);
+        //eprint!("{}",tag);
         use model::Tag;
         use db_conn::*;
         let tag = Tag::get(&mut model, &tag);
@@ -569,49 +574,6 @@ router!(request,
     },
     (POST) (/login)=>{
         sign_in(setting, request,&mut model).get_response(&request)
-    },
-    (GET) (/search)=>{
-        let a:&rouille::Request = request;
-        let q = if let Some(v) = a.get_param("q"){
-            v
-        }
-        else{
-            return rouille::Response::empty_404();
-        };
-        let by = if let Some(v) = a.get_param("by"){v}
-        else{
-            return rouille::Response::empty_404();
-        };
-        
-        match by.as_str(){
-            "tag"=>{
-                use model::Tag;
-                use db_conn::*;
-                let tag = Tag::get(&mut model, &q);
-                let (content_type, data) = match check_accept_type(request){
-                    ResponseContentType::Html|ResponseContentType::Xml=>{
-                        let mut buffer = Vec::new();
-                        if let &Some(ref v) = tag.get_threads(){
-                            templates::tag_thread_list(&mut buffer, v);
-                        }
-                        ("text/html;charset=utf-8", buffer)
-                    },
-                    ResponseContentType::Json=>{
-                        let buffer = 
-                        serde_json::to_vec(&tag).unwrap();
-                        ("application/json", buffer)
-                    }
-                };
-                return rouille::Response::from_data(content_type, data);
-            },
-            "subject"=>{
-                use db_conn::ThreadModel;
-                //model::Thread::search(q)
-            },
-            _=>return rouille::Response::empty_404()
-        }
-        
-        unimplemented!();
     },
     (GET) (/css/{css:String}) =>{
         let css_path = Path::new("./css").join(css);
