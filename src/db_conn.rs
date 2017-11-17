@@ -158,14 +158,8 @@ impl Model for mysql::PooledConn {
     // add code here
 }
 
-pub trait TagController{
-    fn get(model:&mut mysql::PooledConn, name:&str)->Tag;
-    fn put(&mut self,model:&mut mysql::PooledConn, thread:&Thread);
-    fn delete(&mut self,model:&mut mysql::PooledConn, thread:&Thread);
-    fn list(model:&mut mysql::PooledConn, q:&str)->Vec<Tag>;
-}
-impl TagController for Tag{
-    fn list(model:&mut mysql::PooledConn, q:&str)->Vec<Tag>{
+impl Tag{
+    pub fn list(model:&mut mysql::PooledConn, q:&str)->Vec<Tag>{
         let sql = "SELECT * FROM v_tag_threads_count_list where tag_name LIKE ?";
         let params:&[&ToValue] = &[&format!("%{}%", q)];
 
@@ -176,7 +170,7 @@ impl TagController for Tag{
             return Tag::new(row.get(0).unwrap()).with_thread_count(row.get(1).unwrap());
         }).collect()
     }
-    fn get(model:&mut mysql::PooledConn, name:&str)->Tag{
+    pub fn get(model:&mut mysql::PooledConn, name:&str)->Tag{
         let sql = "SELECT thread_uid FROM v_tags where tag_name=?";
         let params:&[&ToValue] = &[&name];
 
@@ -196,22 +190,19 @@ impl TagController for Tag{
         }
         return Tag::new(name.to_string()).with_threads(threads);
     }
-    fn put(&mut self,model:&mut mysql::PooledConn, thread:&Thread){
+    pub fn put(&mut self,model:&mut mysql::PooledConn, thread:&Thread){
         let sql = "INSERT INTO tb_tags VALUES (?, ?)";
         let param:&[&ToValue] = &[self.get_name(), &thread.get_uid()];
         model.prep_exec(sql, param).unwrap();
     }
-    fn delete(&mut self,model:&mut mysql::PooledConn, thread:&Thread){
+    pub fn delete(&mut self,model:&mut mysql::PooledConn, thread:&Thread){
         let sql = "DELETE FROM tb_tags WHERE thread_uid = ?";
         let param:&[&ToValue] = &[&thread.get_uid()];
         model.prep_exec(sql, param).unwrap();
     }
 }
-pub trait ThreadModel{
-    fn list(model:&mut mysql::PooledConn ,mut q: Option<String>, offset:usize, count:usize)->Vec<Thread>;
-}
-impl ThreadModel for Thread{
-    fn list(model:&mut mysql::PooledConn ,mut q: Option<String>, offset:usize, count:usize)->Vec<Thread>{
+impl Thread{
+    pub fn list(model:&mut mysql::PooledConn ,mut q: Option<String>, offset:usize, count:usize)->Vec<Thread>{
         //let sql =format!("SELECT * FROM v_thread_list WHERE subject like ?");
         let mut sql = String::from("SELECT * FROM v_thread_list ");
         use std::fmt::{Error, Write};

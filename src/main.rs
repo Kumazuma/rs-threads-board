@@ -310,7 +310,6 @@ router!(request,
             Some(v)=>v.parse().unwrap_or(25usize),
             None=>25usize
         };
-        use db_conn::ThreadModel;
         let list = model::Thread::list(&mut model, q, offset,count);
         return match check_accept_type(request){
             ResponseContentType::Json=>{
@@ -339,7 +338,6 @@ router!(request,
             Some(v)=>v.parse().unwrap_or(25usize),
             None=>25usize
         };
-        use db_conn::ThreadModel;
         let list = model::Thread::list(&mut model, q, offset,count);
         return match check_accept_type(request){
             ResponseContentType::Json=>{
@@ -487,7 +485,6 @@ router!(request,
     (GET) (/tags)=>{
         //let tags = thread_n_tag::get_tags(&mut model);
         let mut buffer = Vec::new();
-        use db_conn::TagController;
         let tag_list = match request.get_param("q"){
             Some(v)=>model::Tag::list(&mut model, &v),
             None=>Vec::new()
@@ -498,7 +495,6 @@ router!(request,
     (GET) (/tags/{tag:String})=>{
         //eprint!("{}",tag);
         use model::Tag;
-        use db_conn::*;
         let tag = Tag::get(&mut model, &tag);
         let (content_type, data) = match check_accept_type(request){
             ResponseContentType::Html|ResponseContentType::Xml=>{
