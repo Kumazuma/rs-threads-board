@@ -31,7 +31,7 @@ CREATE TABLE `tb_tags` (
 	`thread_uid` INT(11) NOT NULL,
 	PRIMARY KEY (`tag_name`, `thread_uid`),
 	INDEX `t_tags_fk_1` (`thread_uid`, `tag_name`),
-	CONSTRAINT `t_tags_fk_1` FOREIGN KEY (`thread_uid`) REFERENCES `tb_threads` (`uid`)
+	CONSTRAINT `t_tags_fk_1` FOREIGN KEY (`thread_uid`) REFERENCES `tb_threads` (`uid`)  ON DELETE CASCADE
 );
 ```
 ### tb_comments
@@ -46,7 +46,7 @@ CREATE TABLE `tb_comments` (
 	INDEX `FK_tb_comments_tb_users` (`thread_uid`),
 	INDEX `FK5_tb_comments_tb_users` (`writer_uid`),
 	CONSTRAINT `FK5_tb_comments_tb_users` FOREIGN KEY (`writer_uid`) REFERENCES `tb_users` (`uid`),
-	CONSTRAINT `FK__tb_threads` FOREIGN KEY (`thread_uid`) REFERENCES `tb_threads` (`uid`)
+	CONSTRAINT `FK__tb_threads` FOREIGN KEY (`thread_uid`) REFERENCES `tb_threads` (`uid`)  ON DELETE CASCADE
 );
 ```
 
@@ -64,7 +64,7 @@ SELECT tb_comments.thread_uid as thread_uid, tb_comments.uid, tb_users.uid as us
 JOIN tb_users ON tb_comments.writer_uid = tb_users.uid ORDER BY write_datetime ASC
 ```
 
-### v_tag_names
+### v_tag_threads_count_list
 ```sql
 SELECT tag_name, COUNT(*) FROM tb_tags GROUP BY tag_name 
 ```
