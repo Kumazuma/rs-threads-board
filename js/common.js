@@ -1,17 +1,17 @@
 let offset = 0;
 function getToken(){
-    return document.cookie.replace(/(?:(?:^|.*;\s*)token\s*\=\s*([^;]*).*$)|^.*$/, "$1");
+    return document.cookie.replace(/(?:(?:^|.*;\s*)token\s*\=\s*([^;]*).*$)|^.*$/, "$1") ;
 }
 function getNickname(){
-    return document.cookie.replace(/(?:(?:^|.*;\s*)nickname\s*\=\s*([^;]*).*$)|^.*$/, "$1");
+    return decodeURIComponent(document.cookie.replace(/(?:(?:^|.*;\s*)nickname\s*\=\s*([^;]*).*$)|^.*$/, "$1"));
 }
 function getGravatar(){
-    return document.cookie.replace(/(?:(?:^|.*;\s*)gravatar\s*\=\s*([^;]*).*$)|^.*$/, "$1");
+    return  decodeURIComponent(document.cookie.replace(/(?:(?:^|.*;\s*)gravatar\s*\=\s*([^;]*).*$)|^.*$/, "$1"));
 }
 function checkSignin(){
-    let nickname = document.cookie.replace(/(?:(?:^|.*;\s*)nickname\s*\=\s*([^;]*).*$)|^.*$/, "$1");
-    let token = document.cookie.replace(/(?:(?:^|.*;\s*)token\s*\=\s*([^;]*).*$)|^.*$/, "$1");
-    let gravatar = document.cookie.replace(/(?:(?:^|.*;\s*)gravatar\s*\=\s*([^;]*).*$)|^.*$/, "$1");
+    let nickname =decodeURIComponent(document.cookie.replace(/(?:(?:^|.*;\s*)nickname\s*\=\s*([^;]*).*$)|^.*$/, "$1"));
+    let token =document.cookie.replace(/(?:(?:^|.*;\s*)token\s*\=\s*([^;]*).*$)|^.*$/, "$1");
+    let gravatar = decodeURIComponent(document.cookie.replace(/(?:(?:^|.*;\s*)gravatar\s*\=\s*([^;]*).*$)|^.*$/, "$1"));
     if(token != ""){
         $("#sign-in-form").css("display","none");
         $("#user-info").css("display","");
@@ -42,9 +42,9 @@ $(document).ready(()=>{
             data:$("#sign-in-form").serialize()
         };
         $.ajax(ajax_args).done((e)=>{
-            document.cookie = "nickname=" + e.nickname + ";path=/";
+            document.cookie =`nickname=${encodeURIComponent(e.nickname)};path=/`; 
             document.cookie = "token=" + e.token + ";path=/";
-            document.cookie = "gravatar=" + e.gravatar + ";path=/";
+            document.cookie =`gravatar=${encodeURIComponent(e.gravatar)};path=/`;
             checkSignin();
         }).fail(( jqXHR, textStatus )=>{   
             let json_res = jqXHR.responseJSON;

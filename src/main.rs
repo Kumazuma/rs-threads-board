@@ -184,7 +184,7 @@ fn check_accept_type(request:&rouille::Request)->ResponseContentType{
         _=>ResponseContentType::Html
     };
 }
-fn sign_in(setting:&ServerSetting, request:&rouille::Request, model:&mut model::Model)->Box<Response>{
+fn sign_in(setting:&ServerSetting, request:&rouille::Request, model:&mut mysql::PooledConn)->Box<Response>{
     let post = match post_input!(request, {email: String,password: String,}){
         Ok(v)=>v,
         Err( _ )=>{
@@ -195,7 +195,7 @@ fn sign_in(setting:&ServerSetting, request:&rouille::Request, model:&mut model::
     };
     let password = to_sha3(&post.password);
     let email = post.email;
-    let user = match  model.get_user(model::ConditionUserFind::ByEMail(email)){
+    let user = match  model::User::find_by_email(model, &email){
         Some(v)=>v,
         None=>{
             return Box::new(LoginFailed{
@@ -365,7 +365,7 @@ router!(request,
         }));
         if let Ok(v) = check_sign(setting, &input.token){
             //eprintln!("{:?}",input);
-            let user:model::User =match model.get_user(model::ConditionUserFind::ByEMail(v.email)){
+            let user = match  model::User::find_by_email(&mut model, &v.email){
                 Some(v)=>v,
                 None=>{
                     eprintln!("model.get_user");
@@ -411,9 +411,28 @@ router!(request,
         }
         response.get_response(request)
     },
-    (DELETE) (/threads/{id:String})=>{
-        eprint!("{}",id);
-        rouille::Response::text("스레드 삭제")
+    (DELETE) (/threads/{uid:u32})=>{
+        let param =try_or_400!(post_input!(request,{
+            token:String  
+        }));
+        let sign = match check_sign(setting, &param.token){
+            Ok(v)=>v,
+            Err( _ )=>return rouille::Response::text("{}").with_status_code(400).with_additional_header("Content-Type","application/json")
+        };
+        let user =match  model::User::find_by_email(&mut model, &sign.email){
+            Some(v)=>v,
+            None=>return rouille::Response::text("{}").with_status_code(403).with_additional_header("Content-Type","application/json")
+        };
+        use model::Thread;
+        let thread =  match Thread::get(&mut model, uid){
+            None=>return rouille::Response::text("{}").with_status_code(404).with_additional_header("Content-Type","application/json"),
+            Some(v)=>v
+        };
+        if thread.get_opener().get_uid() != user.get_uid(){
+            return rouille::Response::text("{}").with_status_code(403).with_additional_header("Content-Type","application/json");
+        }
+        thread.delete(&mut model);
+        return rouille::Response::text("{}").with_status_code(200).with_additional_header("Content-Type","application/json")
     },
     (GET) (/threads/{id:i32}/comments)=>{
         let response:Box<Response>;
@@ -432,11 +451,11 @@ router!(request,
         }));
         let sign = match check_sign(setting, &param.token){
             Ok(v)=>v,
-            Err( _ )=>return rouille::Response::text("application/json").with_status_code(400)
+            Err( _ )=>return rouille::Response::text("{}").with_status_code(400).with_additional_header("Content-Type","application/json")
         };
-        let user =match model.get_user(model::ConditionUserFind::ByEMail(sign.email)){
+        let user =match  model::User::find_by_email(&mut model, &sign.email){
             Some(v)=>v,
-            None=>return rouille::Response::text("application/json").with_status_code(400)
+            None=>return rouille::Response::text("{}").with_status_code(400).with_additional_header("Content-Type","application/json")
         };
         model.add_new_comment(id, user, param.content);
         let v:Vec<u8> =b"{}".to_vec();
@@ -461,6 +480,30 @@ router!(request,
     (POST) (/threads/{id:i32}/comments/{c_id:String}/thumbsdown)=>{
         eprint!("{}, {}",id, c_id);
         rouille::Response::text("코멘트 추천")
+    },
+    (DELETE)(/comments/{uid:u32})=>{
+        let param =try_or_400!(post_input!(request,{
+            token:String  
+        }));
+        let sign = match check_sign(setting, &param.token){
+            Ok(v)=>v,
+            Err( _ )=>return rouille::Response::text("{}").with_status_code(400).with_additional_header("Content-Type","application/json")
+        };
+        let user =match  model::User::find_by_email(&mut model, &sign.email){
+            Some(v)=>v,
+            None=>return rouille::Response::text("{}").with_status_code(403).with_additional_header("Content-Type","application/json")
+        };
+        use model::Comment;
+        let comment =  match Comment::get(&mut model, uid){
+            None=>return rouille::Response::text("{}").with_status_code(404).with_additional_header("Content-Type","application/json"),
+            Some(v)=>v
+        };
+        if comment.get_user().get_uid() != user.get_uid(){
+            return rouille::Response::text("{}").with_status_code(403).with_additional_header("Content-Type","application/json");
+        }
+        comment.delete(&mut model);
+        return rouille::Response::text("{}").with_status_code(200).with_additional_header("Content-Type","application/json")
+        
     },
     (GET) (/threads/{id:i32}/tags)=>{
         let thread = match model.get_thread(id){
@@ -560,14 +603,43 @@ router!(request,
         templates::profile(&mut s).unwrap();
         rouille::Response::from_data("text/html; charset=utf-8", s)
     },
+    (PUT) (/profile)=>{
+        let param =try_or_400!(post_input!(request,{
+            nickname:String,
+            current_password:String,
+            new_password:String,
+            token:String  
+        }));
+        let sign = match check_sign(setting, &param.token){
+            Ok(v)=>v,
+            Err( _ )=>return rouille::Response::text("{}").with_status_code(400).with_additional_header("Content-Type","application/json")
+        };
+        let user =match  model::User::find_by_email(&mut model, &sign.email){
+            Some(v)=>v,
+            None=>return rouille::Response::text("{}").with_status_code(403).with_additional_header("Content-Type","application/json")
+        };
+        let current_password = to_sha3(&param.current_password);
+        let new_password = if param.new_password.trim().len() != 0{
+            to_sha3(&param.new_password)
+        } 
+        else{
+            current_password.clone()
+        };
+        if user.get_password() == current_password{
+            let user = model::User::new(user.get_uid(), param.nickname, sign.email,Some(new_password));
+            user.update(&mut model);
+        }
+        else{
+            return rouille::Response::text("{}").with_status_code(403).with_additional_header("Content-Type","application/json")
+        }
+        return rouille::Response::text("{}").with_status_code(200).with_additional_header("Content-Type","application/json")
+    },
+    
     (GET) (/users/{user_name:String})=>{
         eprint!("{}",user_name);
         rouille::Response::text("회원 정보")
     },
-    (PUT) (/users/{user_name:String})=>{
-        eprint!("{}",user_name);
-        rouille::Response::text("회원정보 수정")
-    },
+    
     (POST) (/login)=>{
         sign_in(setting, request,&mut model).get_response(&request)
     },

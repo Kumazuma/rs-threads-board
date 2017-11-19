@@ -4,6 +4,8 @@ extern crate serde_derive;
 extern crate serde;
 extern crate serde_json;
 extern crate crypto;
+extern crate mysql;
+use mysql::prelude::*;
 use self::serde::ser::{Serialize, Serializer, SerializeStruct};
 use self::chrono::NaiveDateTime;
 
@@ -21,7 +23,6 @@ pub enum ModelError{
 }
 pub trait Model{
      fn get_threads_list(&mut self,offset:usize, count:usize)->Vec<Thread>;
-     fn get_user(&mut self,condition:ConditionUserFind)->Option<User>;
      fn add_new_user(&mut self, user:User)->Result<(), ModelError>;
      fn get_thread(&mut self, thread_uid:i32)->Option<Thread>;
      fn add_new_comment(&mut self, thread_uid:i32, user:User, content:String)->Result<(), ModelError>;
@@ -31,13 +32,13 @@ pub trait Model{
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Comment{
-    uid:i32,
+    uid:u32,
     user:User,
     write_datetime:NaiveDateTime,
     content:String
 }
 impl Comment{
-    pub fn new(uid:i32, user:User, write_datetime:NaiveDateTime, content:String)->Comment{
+    pub fn new(uid:u32, user:User, write_datetime:NaiveDateTime, content:String)->Comment{
         Comment{
             uid:uid,
             user:user,
@@ -45,7 +46,7 @@ impl Comment{
             content:content
         }
     }
-    pub fn get_uid(&self)->i32{
+    pub fn get_uid(&self)->u32{
         return self.uid;
     }
     pub fn get_user(&self)->&User{
@@ -57,34 +58,32 @@ impl Comment{
     pub fn get_content(&self)->&String{
         return &self.content;
     }
-}
-#[derive(Serialize, Deserialize, Debug)]
-pub struct ThreadBody{
-    uid:i32,
-    subject:String,
-    open_datetime:NaiveDateTime,
-    comments:Vec<Comment>
-}
- impl ThreadBody{
-    pub fn new(uid:i32, subject:String, open_datetime:NaiveDateTime, comments:Vec<Comment>)->ThreadBody{
-        ThreadBody{
-            uid:uid,
-            subject:subject,
-            open_datetime:open_datetime,
-            comments:comments
+    pub fn get(conn:&mut mysql::PooledConn, uid:u32)->Option<Self>{
+        let sql ="SELECT * FROM v_comments WHERE uid = ?";
+        let params:&[&ToValue] = &[&uid];
+        let row  = conn.first_exec(sql,params).unwrap();
+        match row{
+            Some(mut row)=>{
+                let comment = Comment::new(
+                    row.take("uid").expect("uid"),
+                    User::new(
+                        row.take("user_uid").expect("user_uid"),
+                        row.take("user_nickname").expect("user_nickname"),
+                        row.take("user_email").expect("user_email"),
+                        None
+                    ),
+                    row.take("write_datetime").expect("write_datetime"),
+                    row.take("comment").expect("comment")
+                );
+                return Some(comment);
+            }, 
+            None=>return None
         }
     }
-    pub fn get_subject(&self)->&String{
-        &self.subject
-    }
-    pub fn get_open_datetime(&self)->&NaiveDateTime{
-        &self.open_datetime
-    }
-    pub fn get_comments(&self)->&Vec<Comment>{
-        &self.comments
-    }
-    pub fn get_uid(&self)->i32{
-        return self.uid;
+    pub fn delete(self, conn:&mut mysql::PooledConn){
+        let sql ="DELETE FROM tb_comments WHERE uid = ?";
+        let params:&[&ToValue] = &[&self.uid];
+        conn.first_exec(sql,params).unwrap();
     }
 }
 #[derive(Serialize, Deserialize, Debug)]
@@ -120,6 +119,36 @@ impl Thread{
     }
     pub fn get_open_datetime(&self)->&NaiveDateTime{
         &self.open_datetime
+    }
+
+
+    pub fn get(conn:&mut mysql::PooledConn, uid:u32)->Option<Self>{
+        let sql ="SELECT * FROM v_thread_list WHERE uid = ?";
+        let params:&[&ToValue] = &[&uid];
+        let row  = conn.first_exec(sql,params).unwrap();
+        match row{
+            Some(mut row)=>{
+                let thread = Thread::new(
+                    row.take("uid").expect("uid"),
+                    row.take("subject").expect("uid"),
+                    row.take("recent_update").expect("recent_update"),
+                    row.take("created_datetime").expect("created_datetime"),
+                    User::new(
+                        row.take("opener_uid").expect("opener_uid"),
+                        row.take("opener_nickname").expect("opener_nickname"),
+                        row.take("opener_email").expect("opener_email"),
+                        None
+                    )
+                );
+                return Some(thread);
+            }, 
+            None=>return None
+        }
+    }
+    pub fn delete(self, conn:&mut mysql::PooledConn){
+        let sql ="DELETE FROM tb_threads WHERE uid = ?";
+        let params:&[&ToValue] = &[&self.uid];
+        conn.first_exec(sql,params).unwrap();
     }
 }
 #[derive(Serialize, Deserialize, Debug)]
@@ -161,6 +190,26 @@ impl User {
             return format!("https://www.gravatar.com/avatar/{}?s={}", md5.result_str(), size.unwrap());
         }
     }
+    pub fn update(&self, conn:&mut mysql::PooledConn){
+        let param:&[&ToValue] = &[&self.nickname, &self.password, &self.uid];
+        conn.prep_exec("UPDATE tb_users SET nickname = ?, password = ? WHERE uid = ?",param);
+    }
+    pub fn find_by_email(conn:&mut mysql::PooledConn, email:&str)->Option<Self>{
+        let param:&[&ToValue] = &[&email];
+        let res = conn.first_exec("SELECT * FROM tb_users WHERE email = ?", param).unwrap();
+        if let Some(mut v)=res{
+            let res;
+            res = User::new(
+                v.take("uid").unwrap(),
+                v.take("nickname").unwrap(),
+                v.take("email").unwrap(),
+                Some(v.take("password").unwrap())
+            );
+            return Some(res);
+        }
+        return None;
+    }
+
 }
 
 #[derive(Serialize, Deserialize, Debug)]

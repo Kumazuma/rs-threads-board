@@ -23,30 +23,6 @@ impl Model for mysql::PooledConn {
             )
         }).collect();
     }
-    fn get_user(&mut self,condition:ConditionUserFind)->Option<User>{
-        let res;
-        res = match condition{
-            ConditionUserFind::ByEMail(val)=>{
-                let param:&[&ToValue] = &[&val];
-                self.first_exec("SELECT * FROM tb_users WHERE email = ?", param).unwrap()
-            },
-            ConditionUserFind::ByNickname(val)=>{
-                let param:&[&ToValue] = &[&val];
-                self.first_exec("SELECT * FROM tb_users WHERE nickname = ?", param).unwrap()
-            }
-        };
-        if let Some(mut v)=res{
-            let res;
-            res = User::new(
-                v.take("uid").unwrap(),
-                v.take("nickname").unwrap(),
-                v.take("email").unwrap(),
-                Some(v.take("password").unwrap())
-            );
-            return Some(res);
-        }
-        return None;
-    }
     fn add_new_user(&mut self, user:User)->Result<(), ModelError>{
         let mut stmt = self.prepare(r"INSERT INTO tb_users
                                        (email, nickname, password)

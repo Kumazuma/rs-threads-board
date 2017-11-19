@@ -128,3 +128,14 @@ section{
     background-color:#333;
     color:#FFF;
 }
+header{
+    position: relative;
+}
+#btn-delete-thread{
+    position: absolute;
+    right:0px;
+    bottom:0px;
+}
+#btn-delete-thread{
+    
+}
