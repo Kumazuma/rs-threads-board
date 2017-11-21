@@ -18,14 +18,23 @@ use std::fmt::Display;
 trait ToHtml{
     fn to_html(&self, writer:&mut Write)->Result<(), std::io::Error>;
 }
-impl<T:Display> ToHtml for Option<T>{
-    fn to_html(&self, writer:&mut Write)->Result<(), std::io::Error>{
+impl<T: Display> ToHtml for Option<T> {
+    fn to_html(&self, out: &mut Write) -> io::Result<()> {
         if let &Some(ref v) = self{
-            return write!(writer, "{}", v);
+            let mut buf = Vec::new();
+            write!(buf, "{}", self)?;
+            return out.write_all(&buf.into_iter().fold(Vec::new(), |mut v, c| {
+                match c {
+                    b'<' => v.extend_from_slice(b"&lt;"),
+                    b'>' => v.extend_from_slice(b"&gt;"),
+                    b'&' => v.extend_from_slice(b"&amp;"),
+                    c => v.push(c),
+                };
+                v
+            }));
         }
-        else{
-            return write!(writer, "NULL");
-        }
+        return Ok(());
+        
     }
 }
 
