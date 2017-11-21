@@ -17,7 +17,13 @@ mod model;
 mod markdown;
 mod db_conn;
 mod thread_n_tag;
+mod user;
 use model::Model;
+use user::User;
+
+
+
+
 pub trait Response{
     fn get_response(&self, request:&rouille::Request)->rouille::Response;
 }
@@ -195,23 +201,22 @@ fn sign_in(setting:&ServerSetting, request:&rouille::Request, model:&mut mysql::
     };
     let password = to_sha3(&post.password);
     let email = post.email;
-    let user = match  model::User::find_by_email(model, &email){
-        Some(v)=>v,
-        None=>{
-            return Box::new(LoginFailed{
-                code:LoginFailedReason::ThereIsNoAccount
-            });
-        }
-    };
-    if user.get_password() != password{
+    let mut user = User::new().email(email);
+    if let Err( _ ) = user.find_by_email(model){
+        return Box::new(LoginFailed{
+            code:LoginFailedReason::ThereIsNoAccount
+        });
+    }
+    
+    if user.get_password().unwrap() != &password{
         return Box::new(LoginFailed{
             code:LoginFailedReason::IncorrectPassword
         });
     }
 
     let s = SignInfomation{
-        email:user.get_email().to_string(),
-        nickname:user.get_nickname().to_string(),
+        email:user.get_email().unwrap().clone(),
+        nickname:user.get_nickname().unwrap().clone(),
         user_agent:request.header("User-Agent").unwrap_or("").to_string()
     };
     
@@ -234,7 +239,7 @@ fn sign_in(setting:&ServerSetting, request:&rouille::Request, model:&mut mysql::
     let r = base64::encode(&buffer[0..len]);
     //eprintln!("{:?}",r);
     return Box::new(LoginSuccess{
-        nickname:String::from(user.get_nickname()),
+        nickname:user.get_nickname().unwrap().clone(),
         token:r,
         gravatar:user.get_gravatar_url(Some(34))
     });
@@ -365,13 +370,11 @@ router!(request,
         }));
         if let Ok(v) = check_sign(setting, &input.token){
             //eprintln!("{:?}",input);
-            let user = match  model::User::find_by_email(&mut model, &v.email){
-                Some(v)=>v,
-                None=>{
-                    eprintln!("model.get_user");
-                    return rouille::Response::empty_404()
-                }
-            };
+            let mut user = User::new().email(v.email);
+            if let Err(_) = user.find_by_email(&mut model){
+                eprintln!("model.get_user");
+                return rouille::Response::empty_404()
+            }
             let thread = match model.add_thread(&input.subject,user,&input.comment){
                 Ok(v)=>v,
                 Err(_)=>{
@@ -419,10 +422,11 @@ router!(request,
             Ok(v)=>v,
             Err( _ )=>return rouille::Response::text("{}").with_status_code(400).with_additional_header("Content-Type","application/json")
         };
-        let user =match  model::User::find_by_email(&mut model, &sign.email){
-            Some(v)=>v,
-            None=>return rouille::Response::text("{}").with_status_code(403).with_additional_header("Content-Type","application/json")
-        };
+        let mut user = User::new().email(sign.email);
+        if let Err(_) = user.find_by_email(&mut model){
+            eprintln!("model.get_user");
+            return rouille::Response::empty_404()
+        }
         use model::Thread;
         let thread =  match Thread::get(&mut model, uid){
             None=>return rouille::Response::text("{}").with_status_code(404).with_additional_header("Content-Type","application/json"),
@@ -453,10 +457,11 @@ router!(request,
             Ok(v)=>v,
             Err( _ )=>return rouille::Response::text("{}").with_status_code(400).with_additional_header("Content-Type","application/json")
         };
-        let user =match  model::User::find_by_email(&mut model, &sign.email){
-            Some(v)=>v,
-            None=>return rouille::Response::text("{}").with_status_code(400).with_additional_header("Content-Type","application/json")
-        };
+        let mut user = User::new().email(sign.email);
+        if let Err(_) = user.find_by_email(&mut model){
+            eprintln!("model.get_user");
+            return rouille::Response::empty_404()
+        }
         model.add_new_comment(id, user, param.content);
         let v:Vec<u8> =b"{}".to_vec();
         rouille::Response::from_data("application/json", v)
@@ -489,10 +494,11 @@ router!(request,
             Ok(v)=>v,
             Err( _ )=>return rouille::Response::text("{}").with_status_code(400).with_additional_header("Content-Type","application/json")
         };
-        let user =match  model::User::find_by_email(&mut model, &sign.email){
-            Some(v)=>v,
-            None=>return rouille::Response::text("{}").with_status_code(403).with_additional_header("Content-Type","application/json")
-        };
+        let mut user = User::new().email(sign.email);
+        if let Err(_) = user.find_by_email(&mut model){
+            eprintln!("model.get_user");
+            return rouille::Response::empty_404()
+        }
         use model::Comment;
         let comment =  match Comment::get(&mut model, uid){
             None=>return rouille::Response::text("{}").with_status_code(404).with_additional_header("Content-Type","application/json"),
@@ -566,22 +572,19 @@ router!(request,
             nickname: String,
             password:String
         }));
-        let user = model::User::new(0, input.nickname, input.email, Some(to_sha3(input.password.as_str())));
+        let user = User::new()
+        .nickname(input.nickname)
+        .email(input.email)
+        .password(to_sha3(input.password.as_str()));
         let response = 
-        match model.add_new_user(user){
+        match user.sign_up(&mut model){
             Ok( _ )=>ApiResponse{
                 code:0i32,
                 msg:String::from("가입이 완료되었습니다.")
             },
-            Err( e )=>match e{
-                model::ModelError::CollapseInsertData( _ )=>ApiResponse{
+            Err( _ )=>ApiResponse{
                     code:-1i32,
                     msg:String::from("이미 가입된 이메일과 중복됩니다.")
-                },
-                _=>ApiResponse{
-                    code:-1i32,
-                    msg:String::from("이미 가입된 이메일과 중복됩니다.")
-                }
             }
         };
         let code = if response.code == 0{200}else{400};
@@ -614,10 +617,12 @@ router!(request,
             Ok(v)=>v,
             Err( _ )=>return rouille::Response::text("{}").with_status_code(400).with_additional_header("Content-Type","application/json")
         };
-        let user =match  model::User::find_by_email(&mut model, &sign.email){
-            Some(v)=>v,
-            None=>return rouille::Response::text("{}").with_status_code(403).with_additional_header("Content-Type","application/json")
-        };
+        let mut user = User::new().email(sign.email);
+        if let Err(_) = user.find_by_email(&mut model){
+            return rouille::Response::text("{}")
+            .with_status_code(403)
+            .with_additional_header("Content-Type","application/json");
+        }
         let current_password = to_sha3(&param.current_password);
         let new_password = if param.new_password.trim().len() != 0{
             to_sha3(&param.new_password)
@@ -625,8 +630,8 @@ router!(request,
         else{
             current_password.clone()
         };
-        if user.get_password() == current_password{
-            let user = model::User::new(user.get_uid(), param.nickname, sign.email,Some(new_password));
+        if user.get_password().unwrap() == &current_password{
+            let user = user.password(new_password);
             user.update(&mut model);
         }
         else{

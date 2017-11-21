@@ -1,6 +1,4 @@
 extern crate chrono;
-extern crate serde_derive;
-
 extern crate serde;
 extern crate serde_json;
 extern crate crypto;
@@ -9,20 +7,22 @@ use mysql::prelude::*;
 use self::serde::ser::{Serialize, Serializer, SerializeStruct};
 use self::chrono::NaiveDateTime;
 
-use std::sync::Arc;
-use self::crypto::digest::Digest;
-use std::error::Error;
-
-use std::io::{Write;
+use std::io::{Write,Error};
+use std::io::Result as IOResult;
 use std::fmt::Display;
-trait ToHtml{
-    fn to_html(&self, writer:&mut Write)->Result<(), std::io::Error>;
+
+use user::User;
+
+pub trait ToHTML{
+    fn to_html(&self, writer:&mut Write)->IOResult<()>;
 }
-impl<T: Display> ToHtml for Option<T> {
-    fn to_html(&self, out: &mut Write) -> io::Result<()> {
+
+impl<T:Display> ToHTML for Option<T> {
+    fn to_html(&self, out: &mut Write) -> IOResult<()> {
         if let &Some(ref v) = self{
             let mut buf = Vec::new();
-            write!(buf, "{}", self)?;
+            use std::io::Write;
+            write!(buf, "{}", v);
             return out.write_all(&buf.into_iter().fold(Vec::new(), |mut v, c| {
                 match c {
                     b'<' => v.extend_from_slice(b"&lt;"),
@@ -37,7 +37,6 @@ impl<T: Display> ToHtml for Option<T> {
         
     }
 }
-
 pub enum ConditionUserFind{
     ByEMail(String),
     ByNickname(String)
@@ -49,7 +48,7 @@ pub enum ModelError{
 }
 pub trait Model{
      fn get_threads_list(&mut self,offset:usize, count:usize)->Vec<Thread>;
-     fn add_new_user(&mut self, user:User)->Result<(), ModelError>;
+     //fn add_new_user(&mut self, user:User)->Result<(), ModelError>;
      fn get_thread(&mut self, thread_uid:i32)->Option<Thread>;
      fn add_new_comment(&mut self, thread_uid:i32, user:User, content:String)->Result<(), ModelError>;
      fn add_thread(&mut self, subject:&String, user:User,first_comment:&String)->Result<Thread,()>;
@@ -92,12 +91,10 @@ impl Comment{
             Some(mut row)=>{
                 let comment = Comment::new(
                     row.take("uid").expect("uid"),
-                    User::new(
-                        row.take("user_uid").expect("user_uid"),
-                        row.take("user_nickname").expect("user_nickname"),
-                        row.take("user_email").expect("user_email"),
-                        None
-                    ),
+                    User::new()
+                        .uid(row.take("user_uid").expect("user_uid"))
+                        .nickname(row.take("user_nickname").expect("user_nickname"))
+                        .email(row.take("user_email").expect("user_email")),
                     row.take("write_datetime").expect("write_datetime"),
                     row.take("comment").expect("comment")
                 );
@@ -159,12 +156,10 @@ impl Thread{
                     row.take("subject").expect("uid"),
                     row.take("recent_update").expect("recent_update"),
                     row.take("created_datetime").expect("created_datetime"),
-                    User::new(
-                        row.take("opener_uid").expect("opener_uid"),
-                        row.take("opener_nickname").expect("opener_nickname"),
-                        row.take("opener_email").expect("opener_email"),
-                        None
-                    )
+                    User::new()
+                        .uid(row.take("opener_uid").expect("opener_uid"))
+                        .nickname(row.take("opener_nickname").expect("opener_nickname"))
+                        .email(row.take("opener_email").expect("opener_email"))
                 );
                 return Some(thread);
             }, 
@@ -177,66 +172,7 @@ impl Thread{
         conn.first_exec(sql,params).unwrap();
     }
 }
-#[derive(Serialize, Deserialize, Debug)]
-pub struct User{
-    uid:i32,
-    nickname:String,
-    email:String,
-    password:String
-}
-impl User {
-    pub fn new(uid:i32, nickname:String, email:String, password:Option<String>)->User{
-        User{
-            uid:uid,
-            nickname:nickname,
-            email:email,
-            password:password.unwrap_or(String::new())
-        }
-    }
-    // add code here
-    pub fn get_uid(&self)->i32{
-        self.uid
-    }
-    pub fn get_nickname(&self)->&str{
-        self.nickname.as_str()
-    }
-    pub fn get_email(&self)->&str{
-        self.email.as_str()
-    }
-    pub fn get_password(&self)->&str{
-        self.password.as_str()
-    }
-    pub fn get_gravatar_url(&self, size:Option<u32>)->String{
-        let mut md5 = crypto::md5::Md5::new();
-        md5.input_str(self.email.as_str());
-        if let None = size{
-            return format!("https://www.gravatar.com/avatar/{}", md5.result_str());
-        }
-        else{
-            return format!("https://www.gravatar.com/avatar/{}?s={}", md5.result_str(), size.unwrap());
-        }
-    }
-    pub fn update(&self, conn:&mut mysql::PooledConn){
-        let param:&[&ToValue] = &[&self.nickname, &self.password, &self.uid];
-        conn.prep_exec("UPDATE tb_users SET nickname = ?, password = ? WHERE uid = ?",param);
-    }
-    pub fn find_by_email(conn:&mut mysql::PooledConn, email:&str)->Option<Self>{
-        let param:&[&ToValue] = &[&email];
-        let res = conn.first_exec("SELECT * FROM tb_users WHERE email = ?", param).unwrap();
-        if let Some(mut v)=res{
-            let res;
-            res = User::new(
-                v.take("uid").unwrap(),
-                v.take("nickname").unwrap(),
-                v.take("email").unwrap(),
-                Some(v.take("password").unwrap())
-            );
-            return Some(res);
-        }
-        return None;
-    }
 
-}
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Tag{

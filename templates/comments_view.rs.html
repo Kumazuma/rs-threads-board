@@ -1,6 +1,7 @@
 @* A very simple template with no arguments.  This line is a comment. *@
 @use model::Comment;
 @use markdown::render;
+@use model::ToHTML;
 @(comments:&Vec<Comment>)
 @for comment in comments{
 <div class="media" style="overflow:visible;">

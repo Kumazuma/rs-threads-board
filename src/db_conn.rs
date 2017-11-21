@@ -2,7 +2,7 @@ extern crate mysql;
 use mysql::prelude::*;
 use std;
 use model::*;
-
+use user::*;
 impl Model for mysql::PooledConn {
     fn get_threads_list(&mut self,offset:usize, count:usize)->Vec<Thread>{
         let sql =format!("SELECT * FROM v_thread_list LIMIT {}, {}", offset, count);
@@ -14,29 +14,14 @@ impl Model for mysql::PooledConn {
                 row.take("subject").expect("uid"),
                 row.take("recent_update").expect("recent_update"),
                 row.take("created_datetime").expect("created_datetime"),
-                User::new(
-                    row.take("opener_uid").expect("opener_uid"),
-                    row.take("opener_nickname").expect("opener_nickname"),
-                    row.take("opener_email").expect("opener_email"),
-                    None
-                )
+                User::new()
+                .uid(row.take("opener_uid").expect("opener_uid"))
+                .nickname(row.take("opener_nickname").expect("opener_nickname"))
+                .email(row.take("opener_email").expect("opener_email"))
             )
         }).collect();
     }
-    fn add_new_user(&mut self, user:User)->Result<(), ModelError>{
-        let mut stmt = self.prepare(r"INSERT INTO tb_users
-                                       (email, nickname, password)
-                                   VALUES
-                                       (:email, :nickname, :password)").unwrap();
-        if let Err(e) = stmt.execute(params!{
-            "email" => user.get_email(),
-            "nickname" => user.get_nickname(),
-            "password" => user.get_password(),
-        }){
-            return Err(ModelError::CollapseInsertData(String::from("E-Mail")));
-        }
-        return Ok(());
-    }
+    
     fn get_thread(&mut self, thread_uid:i32)->Option<Thread>{
         let sql =format!("SELECT * FROM v_thread_list WHERE uid = ? LIMIT 1");
         let params:&[&ToValue] = &[&thread_uid];
@@ -51,12 +36,10 @@ impl Model for mysql::PooledConn {
             thread.take("subject").expect("uid"),
             thread.take("recent_update").expect("recent_update"),
             thread.take("created_datetime").expect("created_datetime"),
-            User::new(
-                thread.take("opener_uid").expect("opener_uid"),
-                thread.take("opener_nickname").expect("opener_nickname"),
-                thread.take("opener_email").expect("opener_email"),
-                None
-            )
+            User::new()
+                .uid(thread.take("opener_uid").expect("opener_uid"))
+                .nickname(thread.take("opener_nickname").expect("opener_nickname"))
+                .email(thread.take("opener_email").expect("opener_email"))
         );
         return Some(res);
     }
@@ -67,12 +50,10 @@ impl Model for mysql::PooledConn {
             let mut row = row.unwrap();
             Comment::new(
                 row.take("uid").expect("uid"),
-                User::new(
-                    row.take("user_uid").expect("user_uid"),
-                    row.take("user_nickname").expect("user_nickname"),
-                    row.take("user_email").expect("user_email"),
-                    None
-                ),
+                User::new()
+                .nickname(row.take("user_nickname").expect("user_nickname"))
+                    .uid(row.take("user_uid").expect("user_uid"))
+                    .email(row.take("user_email").expect("user_email")),
                 row.take("write_datetime").expect("write_datetime"),
                 row.take("comment").expect("comment")
             )
@@ -195,12 +176,10 @@ impl Thread{
                 row.take("subject").expect("uid"),
                 row.take("recent_update").expect("recent_update"),
                 row.take("created_datetime").expect("created_datetime"),
-                User::new(
-                    row.take("opener_uid").expect("opener_uid"),
-                    row.take("opener_nickname").expect("opener_nickname"),
-                    row.take("opener_email").expect("opener_email"),
-                    None
-                )
+                User::new()
+                .uid(row.take("opener_uid").expect("opener_uid"))
+                .nickname(row.take("opener_nickname").expect("opener_nickname"))
+                .email(row.take("opener_email").expect("opener_email"))
             )
             }).collect()
         }
@@ -214,12 +193,10 @@ impl Thread{
                 row.take("subject").expect("uid"),
                 row.take("recent_update").expect("recent_update"),
                 row.take("created_datetime").expect("created_datetime"),
-                User::new(
-                    row.take("opener_uid").expect("opener_uid"),
-                    row.take("opener_nickname").expect("opener_nickname"),
-                    row.take("opener_email").expect("opener_email"),
-                    None
-                )
+                User::new()
+                .uid(row.take("opener_uid").expect("opener_uid"))
+                .nickname(row.take("opener_nickname").expect("opener_nickname"))
+                .email(row.take("opener_email").expect("opener_email"))
             )
             }).collect()
         };

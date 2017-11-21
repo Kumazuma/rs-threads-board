@@ -1,6 +1,7 @@
 @* A very simple template with no arguments.  This line is a comment. *@
 @use model::Thread;
 @use templates::{default_js_header, default_navbar};
+@use model::ToHTML;
 @(list:&Vec<Thread>)
 <!DOCTYPE html>
 <html lang="ko">
