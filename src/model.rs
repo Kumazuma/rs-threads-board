@@ -12,6 +12,23 @@ use self::chrono::NaiveDateTime;
 use std::sync::Arc;
 use self::crypto::digest::Digest;
 use std::error::Error;
+
+use std::io::{Write;
+use std::fmt::Display;
+trait ToHtml{
+    fn to_html(&self, writer:&mut Write)->Result<(), std::io::Error>;
+}
+impl<T:Display> ToHtml for Option<T>{
+    fn to_html(&self, writer:&mut Write)->Result<(), std::io::Error>{
+        if let &Some(ref v) = self{
+            return write!(writer, "{}", v);
+        }
+        else{
+            return write!(writer, "NULL");
+        }
+    }
+}
+
 pub enum ConditionUserFind{
     ByEMail(String),
     ByNickname(String)
