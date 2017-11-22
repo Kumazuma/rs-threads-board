@@ -82,20 +82,11 @@ impl Model for mysql::PooledConn {
         let uid:i32;
         {
             let mut transaction = self.start_transaction(false, Some(IsolationLevel::Serializable), Some(false)).unwrap();
-            
-            
-            /*
-            `uid` INT(11) NOT NULL AUTO_INCREMENT,
-        `opener_uid` INT(11) NOT NULL DEFAULT '0',
-        `opener_nickname` VARCHAR(32) NOT NULL,
-        `subject` VARCHAR(64) NOT NULL COLLATE 'utf8mb4_unicode_ci',
-        `created_datetime` DATETIME NOT NULL,
-            */
             let params:&[&ToValue] = &[&user.get_uid(), &user.get_nickname(), subject];
-            transaction.prep_exec("INSERT INTO tb_threads (opener_uid, opener_nickname, subject, created_datetime) VALUES (?,?,?,now())",params);
-            let row = transaction.first("SELECT LAST_INSERT_ID() FROM tb_threads").unwrap();
-            let row = row.unwrap();
-            uid = row.get(0).unwrap();
+            {
+                let result = transaction.prep_exec("INSERT INTO tb_threads (opener_uid, opener_nickname, subject, created_datetime) VALUES (?,?,?,now())",params).unwrap();
+                uid = result.last_insert_id() as i32;
+            }
             transaction.prep_exec(r"INSERT INTO tb_comments
                                        (thread_uid, writer_uid, write_datetime, comment)
                                    VALUES
