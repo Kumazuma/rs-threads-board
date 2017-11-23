@@ -95,7 +95,40 @@ $(document).ready(()=>{
         e.preventDefault();
     });
     $("#more-threads").on("click",(e)=>{
-
+        offset += 25;
+        let a = /q=([^&]*)/;
+        
+        let q= a.exec(location.search);
+        if(q != undefined)
+        {
+            q = q[1];
+        }
+        //let q = location.search.replace(, "$1");
+        //document.location.search.substr
+        let data = {offset:offset};
+        if(q != undefined)
+        {
+            data["q"] = q;
+        }
+        $.ajax(document.location.pathname,{
+            data:data,
+            dataType:"json"
+        }).done((e)=>{
+            let res = 
+            e.map((it)=>
+                `<tr>
+                <td><a href="/thrads/${it.uid}">${it.subject}</a></td>
+                <td>
+                    <span class="user">
+                        <img src="https://www.gravatar.com/avatar/${ md5(it.opener.email)}?s=24" class="user-gravta">
+                        <span>${it.opener.nickname}#${it.opener.uid}</span>
+                    </span>
+                </td>
+                <td>${it.recent_update_datetime}</td>
+            </tr>`
+            );
+            $("#thread-list tbody").append(res.join(""));
+        });
         
     });
     $("#tag-query").on("submit",(e)=>{
@@ -103,4 +136,5 @@ $(document).ready(()=>{
         document.location = `/tags/${tag}`;
         e.preventDefault();
     });
+
 });
