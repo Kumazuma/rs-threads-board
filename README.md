@@ -49,7 +49,10 @@ CREATE TABLE `tb_comments` (
 	CONSTRAINT `FK__tb_threads` FOREIGN KEY (`thread_uid`) REFERENCES `tb_threads` (`uid`)  ON DELETE CASCADE
 );
 ```
-
+### v_thread_last_update
+```sql
+select `tb_comments`.`thread_uid` AS `thread_uid`,max(`tb_comments`.`write_datetime`) AS `recent_update` from `tb_comments` group by `tb_comments`.`thread_uid`
+```
 ### v_thread_list
 ```sql
 SELECT tb_threads.uid, tb_threads.subject, tb_threads.created_datetime, tb_threads.opener_uid, tb_threads.opener_nickname, tb_users.email as opener_email, recent_update
