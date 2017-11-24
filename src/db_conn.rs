@@ -96,9 +96,9 @@ impl Thread{
         let uid:u32;
         {
             let mut transaction = conn.start_transaction(false, Some(IsolationLevel::Serializable), Some(false)).unwrap();
-            let params:&[&ToValue] = &[&user.get_uid(), &user.get_nickname(), subject];
+            let params:&[&ToValue] = &[&user.get_uid(),  subject];
             {
-                let result = transaction.prep_exec("INSERT INTO tb_threads (opener_uid, opener_nickname, subject, created_datetime) VALUES (?,?,?,now())",params).unwrap();
+                let result = transaction.prep_exec("INSERT INTO tb_threads (opener_uid,  subject, created_datetime) VALUES (?,?,now())",params).unwrap();
                 uid = result.last_insert_id() as u32;
             }
             transaction.prep_exec(r"INSERT INTO tb_comments

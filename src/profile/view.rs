@@ -9,7 +9,5 @@ pub fn profile_view(content_type:ResponseContentType)->rouille::Response{
     rouille::Response::from_data("text/html; charset=utf-8", s)
 }
 pub fn ok_view(content_type:ResponseContentType)->rouille::Response{
-    return rouille::Response::text("{}")
-    .with_status_code(200)
-    .with_additional_header("Content-Type","application/json");
+    return rouille::Response::from_data("application/json", "{}");
 }

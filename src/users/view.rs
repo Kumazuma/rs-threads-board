@@ -10,8 +10,16 @@ pub fn signup(_:ResponseContentType)->rouille::Response{
     return rouille::Response::from_data("text/html;charset=utf-8", s);
 }
 pub fn signup_ok(ctype: ResponseContentType)->rouille::Response{
-    let v = "{msg:\"가입이 완료되었습니다.\"}";
-    rouille::Response::text(v).with_additional_header("Content-Type","application/json")
+    #[derive(Serialize, Deserialize, Debug)]
+    struct Msg{
+        msg:String
+    };
+    let s = Msg{
+        msg:String::from("가입이 완료되었습니다")
+    };
+    let v = try_or_400!(serde_json::to_vec(&s));
+    //let v = vec![b"{msg:\"가입이 완료되었습니다.\"}"];
+    rouille::Response::from_data("application/json", v)
 }
 pub fn signin_ok(ctype:ResponseContentType, user:&User, token:String)->rouille::Response{
     #[derive(Serialize, Deserialize, Debug)]
@@ -26,5 +34,5 @@ pub fn signin_ok(ctype:ResponseContentType, user:&User, token:String)->rouille::
         nickname:user.get_nickname().unwrap().clone()
     };
     let v = try_or_400!(serde_json::to_vec(&s));
-    rouille::Response::from_data("application/json", v)
+    return rouille::Response::from_data("application/json", v);
 }
