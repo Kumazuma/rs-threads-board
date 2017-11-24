@@ -21,7 +21,7 @@ pub fn process(request:&rouille::Request, conn:&mut mysql::PooledConn, setting:&
         let tags = thread_n_tag::get_tags_in_thread( conn, &thread);
         let (content_type, data) = match ctype{
             ResponseContentType::Html|ResponseContentType::Xml=>{
-                let mut buffer = Vec::new();
+                let mut buffer:Vec<u8> = vec![];
                 templates::format_thread_tags(&mut buffer, &tags);
                 ("text/html;charset=utf-8", buffer)
             },
@@ -35,28 +35,28 @@ pub fn process(request:&rouille::Request, conn:&mut mysql::PooledConn, setting:&
     },
     (GET) (/tags)=>{
         //let tags = thread_n_tag::get_tags(&mut model);
-        let mut buffer = Vec::new();
+        let mut buffer:Vec<u8> = vec![];
         let tag_list = match request.get_param("q"){
-            Some(v)=>Tag::list(conn, &v),
-            None=>Vec::new()
+            Some(v)=>Tag::list(conn,Some(&v)),
+            None=>Tag::list(conn,None)
         };
-        templates::tags(&mut buffer,tag_list);
-        return Some(rouille::Response::from_data("text/html;charset=utf-8", buffer)) ;
+        return Some(tag_list_view(ctype, tag_list));
+        
     },
     (GET) (/tags/{tag:String})=>{
         //eprint!("{}",tag);
-        let tag = Tag::get(conn, &tag);
+        let tag = Tag::new(tag);
+        let threads = tag.get_thread_list(conn);
+        
         let (content_type, data) = match ctype{
             ResponseContentType::Html|ResponseContentType::Xml=>{
-                let mut buffer = Vec::new();
-                if let &Some(ref v) = tag.get_threads(){
-                    templates::tag_thread_list(&mut buffer, v);
-                }
+                let mut buffer:Vec<u8> = vec![];
+                templates::tag_thread_list(&mut buffer, &threads);
                 ("text/html;charset=utf-8", buffer)
             },
             ResponseContentType::Json=>{
                 let buffer = 
-                serde_json::to_vec(&tag).unwrap();
+                serde_json::to_vec(&threads).unwrap();
                 ("application/json", buffer)
             }
         };

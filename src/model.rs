@@ -169,20 +169,14 @@ impl Thread{
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Tag{
     name:String,
-    threads:Option<Vec<Thread>>,
-    thread_count:Option<usize>
+    thread_count:Option<usize>,
 }
 impl Tag{
     pub fn new(name:String)->Tag{
         return Tag{
             name:name,
-            threads:None,
             thread_count:None
         };
-    }
-    pub fn with_threads(mut self, threads:Vec<Thread>)->Self{
-        self.threads = Some(threads);
-        return self;
     }
     pub fn with_thread_count(mut self, count:usize)->Self{
         self.thread_count = Some(count);
@@ -192,19 +186,32 @@ impl Tag{
     pub fn get_name(&self)->&String{
         return &self.name;
     }
-    pub fn get_threads(&self)->&Option<Vec<Thread>>{
-        return &self.threads;
-    }
     pub fn get_thread_count(&self)->usize{
         if let Some(v) = self.thread_count{
             return v;
         }
-        else if let Some(ref v) =self.threads{
-            return v.len();
+        return 0;
+    }
+    pub fn get_thread_list(&self, conn:&mut mysql::PooledConn)->Vec<Thread>{
+        let sql = "SELECT thread_uid FROM v_tags where tag_name=?";
+        let params:&[&ToValue] = &[&self.name];
+
+        let mut threads:Vec<Thread> = Vec::new();
+        let thread_uids:Vec<u32> = 
+        conn.prep_exec(sql,params).unwrap().map(|row|{
+            let row = row.unwrap();
+            //eprintln!("{:?}",row);
+            return row.get(0).unwrap();
+        }).collect();
+        //.into_iter()
+        
+        for uid in thread_uids{
+            threads.push(match Thread::get( conn, uid){
+                Some(v)=>v,
+                None=>continue
+            });
         }
-        else{
-            return 0;
-        }
+        return threads;
     }
 }
 

@@ -64,7 +64,12 @@ $(document).ready(()=>{
     });
     $("#comment-writer-gravatar").attr("src",getGravatar().replace("s=34","s=64"));
     $("#comment-preview-button").on("click",(e)=>{
-        $.ajax("/preview/comment",{data:{text:$("#comment-write-content").val()},dataType:"html",Accept:"application/json"}).done((e)=>{
+        $.ajax("/preview/comment",{
+            data:{
+                text:$("#comment-write-content").val()
+            },
+            dataType:"html",
+            Accept:"application/json"}).done((e)=>{
             $("#preview").html(e);
         });
     });
@@ -123,7 +128,7 @@ $(document).ready(()=>{
             let res = 
             e.map((it)=>
                 `<tr>
-                <td><a href="/thrads/${it.uid}">${it.subject}</a></td>
+                <td><a href="/threads/${it.uid}">${it.subject}</a></td>
                 <td>
                     <span class="user">
                         <img src="https://www.gravatar.com/avatar/${ md5(it.opener.email)}?s=24" class="user-gravta">

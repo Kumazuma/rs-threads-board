@@ -48,43 +48,33 @@ impl Model for mysql::PooledConn {
 }
 */
 impl Tag{
-    pub fn list(model:&mut mysql::PooledConn, q:&str)->Vec<Tag>{
-        let sql = "SELECT * FROM v_tag_threads_count_list where tag_name LIKE ?";
-        let params:&[&ToValue] = &[&format!("%{}%", q)];
-
-        let mut threads:Vec<Thread> = Vec::new();
-        //let thread_uids:Vec<i32> = 
-        model.prep_exec(sql,params).unwrap().map(|row|{
-            let row = row.unwrap();
-            return Tag::new(row.get(0).unwrap()).with_thread_count(row.get(1).unwrap());
-        }).collect()
-    }
-    pub fn get(model:&mut mysql::PooledConn, name:&str)->Tag{
-        let sql = "SELECT thread_uid FROM v_tags where tag_name=?";
-        let params:&[&ToValue] = &[&name];
-
-        let mut threads:Vec<Thread> = Vec::new();
-        let thread_uids:Vec<u32> = 
-        model.prep_exec(sql,params).unwrap().map(|row|{
-            let row = row.unwrap();
-            //eprintln!("{:?}",row);
-            return row.get(0).unwrap();
-        }).collect();
-        //.into_iter()
-        for uid in thread_uids{
-            threads.push(match Thread::get( model, uid){
-                Some(v)=>v,
-                None=>continue
-            });
+    pub fn list(model:&mut mysql::PooledConn, q:Option<&str>)->Vec<Tag>{
+        if let Some(v) = q{
+            let sql = "SELECT * FROM v_tag_threads_count_list where tag_name LIKE ?";
+            let params:&[&ToValue] = &[&format!("%{}%", v)];
+            //let thread_uids:Vec<i32> = 
+            model.prep_exec(sql,params).unwrap().map(|row|{
+                let row = row.unwrap();
+                return Tag::new(row.get(0).unwrap()).with_thread_count(row.get(1).unwrap());
+            }).collect()
         }
-        return Tag::new(name.to_string()).with_threads(threads);
+        else{
+
+            let sql = "SELECT * FROM v_tag_threads_count_list";
+            let params:&[&ToValue] = &[];
+            model.prep_exec(sql,params).unwrap().map(|row|{
+                let row = row.unwrap();
+                return Tag::new(row.get(0).unwrap()).with_thread_count(row.get(1).unwrap());
+            }).collect()
+        }
+        
     }
-    pub fn put(&mut self,model:&mut mysql::PooledConn, thread:&Thread){
+    pub fn put(&self,model:&mut mysql::PooledConn, thread:&Thread){
         let sql = "INSERT INTO tb_tags VALUES (?, ?)";
         let param:&[&ToValue] = &[self.get_name(), &thread.get_uid()];
         model.prep_exec(sql, param).unwrap();
     }
-    pub fn delete(&mut self,model:&mut mysql::PooledConn, thread:&Thread){
+    pub fn delete(&self,model:&mut mysql::PooledConn, thread:&Thread){
         let sql = "DELETE FROM tb_tags WHERE thread_uid = ?";
         let param:&[&ToValue] = &[&thread.get_uid()];
         model.prep_exec(sql, param).unwrap();
