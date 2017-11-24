@@ -7,13 +7,14 @@
 <div class="media" style="overflow:visible;">
     <div class="media-left media-middle">
         <img class="media-object" src="@comment.get_user().get_gravatar_url(Some(64))">
-        <span>@comment.get_user().get_nickname()#@comment.get_user().get_uid()</span>
     </div>
     <div class="media-body" >
         <article>
                 @render(comment.get_content())
         </article>
         <aside>
+            <hr>
+            by <span>@comment.get_user().get_nickname()#@comment.get_user().get_uid()</span>
             <span class="comment-writed-date">@comment.get_writed_datetime()</span>
             <button class="btn btn-default btn-delete-comment" data-comment-id="@comment.get_uid()">삭제</button>
         </aside>

@@ -45,8 +45,6 @@ ul.thread-list li>a{
     float:left;
     text-decoration: none;
 }
-ul.thread-list li:nth-child(even){
-}
 ul.thread-list li:nth-child(odd){
     background-color: #DDD;
 }
@@ -59,18 +57,14 @@ ul.thread-list span.recent-update-datetime{
 ul.thread-list span.created-datetime{
     float:right;
 }
-#thread-list tbody tr td:first-child{
-
-}
-#thread-list tbody tr td:nth-child(2){
-}
-    
 #thread-list .user{
     position: relative;
 }
 #thread-list .user>span{
     position: absolute;
     visibility: hidden;
+    word-break: keep-all;
+    
 }
 #thread-list .user:hover>span{
     visibility: visible;

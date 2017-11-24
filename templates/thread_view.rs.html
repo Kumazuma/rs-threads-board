@@ -6,7 +6,7 @@
 <html lang="ko">
         <head>
             @:default_js_header()
-            <title>Document</title>
+            <title>rs-board::@thread.get_subject()</title>
             <script src="/js/threads.js"></script>
         </head>
         <body style="padding-top:70px;">
@@ -36,8 +36,14 @@
                             <div class="form-group">
                                 <textarea id="comment-write-content" class="form-control"></textarea>   
                                 <input class="btn btn-default" type="submit" value="comment">
+                                <input class="btn btn-default" id="comment-preview-button"type="button" value="preview">
                             </div>
                         </form>
+                        <hr>
+                        <h1>preview</h1>
+                        <div id="preview">
+
+                        </div>
                     </div>
                 </div>
                 <div>
@@ -46,9 +52,11 @@
                         <li>@{@{내용@}@}:문법 사용하지 않는 내용입니다</li>
                         <li>[내용](링크): 링크를 거는 문법입니다</li>
                         <li>__내용__ 또는 **내용**: 텍스트에 볼드처리 할 때 사용합니다.</li>
+                        <li>_내용_ 또는 *내용*: 텍스트에 이탤릭처리 할 때 사용합니다.</li>
                         <li>--내용-- 또는 ~~내용~~: 텍스트를 취소선처리합니다.</li>
                         <li>공백 두 개'  ': 줄 바꿈을 합니다.</li>
                         <li>줄바꿈 두번(\n\n): 문단을 나눕니다.</li>
+                        <li>```내용```:안에 있는 내용을 preformatted text로 바꿔줍니다</li>
                     </ul>
                 </div>
             </footer>

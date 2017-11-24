@@ -62,6 +62,12 @@ $(document).ready(()=>{
         });
         e.preventDefault();
     });
+    $("#comment-writer-gravatar").attr("src",getGravatar().replace("s=34","s=64"));
+    $("#comment-preview-button").on("click",(e)=>{
+        $.ajax("/preview/comment",{data:{text:$("#comment-write-content").val()},dataType:"html",Accept:"application/json"}).done((e)=>{
+            $("#preview").html(e);
+        });
+    });
     $("#comment-write-form").on("submit",(e)=>{
         let nickname = document.cookie.replace(/(?:(?:^|.*;\s*)nickname\s*\=\s*([^;]*).*$)|^.*$/, "$1");
         let token = document.cookie.replace(/(?:(?:^|.*;\s*)token\s*\=\s*([^;]*).*$)|^.*$/, "$1");

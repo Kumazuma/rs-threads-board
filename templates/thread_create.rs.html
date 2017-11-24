@@ -6,7 +6,7 @@
 <html lang="ko">
         <head>
             @:default_js_header()
-            <title>Document</title>
+            <title>board::open thread</title>
             <script src="./js/thread_create.js"></script>
         </head>
         <body style="padding-top:70px;">
@@ -18,15 +18,34 @@
                     <input class="form-control"  id="thread-write-subject" type="text" name="subject">
                 </div>
                 <div class="form-group">
-                    <textarea class="form-control" style="min-width: 100%; max-width:100%; width: 100%;" name="comment"></textarea>
+                    <textarea id="comment-write-content"  class="form-control" style="min-width: 100%; max-width:100%; width: 100%;" name="comment"></textarea>
                 </div>
                 <div class="form-group">
                     <label for="thread-write-tags">태그</label>
                     <input class="form-control"  id="thread-write-tags" type="text" name="tags">
                 </div>
                 <input type="submit" value="작성" class="btn btn-default">
+                <input class="btn btn-default" id="comment-preview-button"type="button" value="preview">
                 <input type="hidden" name="token" value="">
             </form>
+            <hr>
+            <div id="preview">
+
+            </div>
+            <hr>
+            <div>
+                마크다운 문법
+                <ul>
+                    <li>@{@{내용@}@}:문법 사용하지 않는 내용입니다</li>
+                    <li>[내용](링크): 링크를 거는 문법입니다</li>
+                    <li>__내용__ 또는 **내용**: 텍스트에 볼드처리 할 때 사용합니다.</li>
+                    <li>_내용_ 또는 *내용*: 텍스트에 이탤릭처리 할 때 사용합니다.</li>
+                    <li>--내용-- 또는 ~~내용~~: 텍스트를 취소선처리합니다.</li>
+                    <li>공백 두 개'  ': 줄 바꿈을 합니다.</li>
+                    <li>줄바꿈 두번(\n\n): 문단을 나눕니다.</li>
+                    <li>```내용```:안에 있는 내용을 preformatted text로 바꿔줍니다</li>
+                </ul>
+            </div>
         </section>
     </body>
 </html>
