@@ -27,11 +27,11 @@ mod users;
 mod tags;
 use user::User;
 use common::*;
-
+mod preview;
 type ControllerReturnType = Option<rouille::Response>;
 type ContorllerType = Fn(&rouille::Request, &mut mysql::PooledConn, &ServerSetting,ResponseContentType)->ControllerReturnType;
 
-pub fn process(request:&rouille::Request, conn:&mut mysql::PooledConn, setting:&ServerSetting,ctype:ResponseContentType)->ControllerReturnType{
+pub fn process(request:&rouille::Request, _:&mut mysql::PooledConn, setting:&ServerSetting,ctype:ResponseContentType)->ControllerReturnType{
     router!(request,
     (GET) (/write)=>{
         let mut s = Vec::new();
@@ -80,6 +80,7 @@ const controllers:&[&ContorllerType] = &[
     &profile::controller::process,
     &users::controller::process,
     &tags::controller::process,
+    &preview::controller::process,
     &process
 ]; 
 
@@ -109,7 +110,7 @@ fn main() {
         //eprintln!("{:?}", request);
         let setting:*const _ = &setting;
         let setting:&ServerSetting = unsafe{
-            std::mem::transmute::<_, _>(setting)
+            std::mem::transmute(setting)
         };
         //eprintln!("{}",setting.db);
         let mut model = try_or_400!(pool.get_conn());

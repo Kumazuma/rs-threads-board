@@ -34,7 +34,7 @@ pub fn process(request:&rouille::Request, conn:&mut mysql::PooledConn, setting:&
         let list = Thread::list( conn, q, offset,count);
         return Some(thread_list_view(ctype, list));
     },
-    (POST)(/threds)=>{
+    (POST)(/threads)=>{
         let input = post_input!(request, {
             token: String,
             subject: String,

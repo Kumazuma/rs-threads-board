@@ -13,7 +13,7 @@ pub fn process(request:&rouille::Request, conn:&mut mysql::PooledConn, setting:&
     router!(request, 
 
 
-(GET) (/threads/{uid:u32}/tags)=>{
+    (GET) (/threads/{uid:u32}/tags)=>{
         let thread = match Thread::get(conn, uid){
             Some(v)=>v,
             None=>return Some(rouille::Response::empty_404())

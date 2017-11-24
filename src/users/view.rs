@@ -15,12 +15,12 @@ pub fn signup_ok(ctype: ResponseContentType)->rouille::Response{
 }
 pub fn signin_ok(ctype:ResponseContentType, user:&User, token:String)->rouille::Response{
     #[derive(Serialize, Deserialize, Debug)]
-    struct sign_res{
+    struct SignRes{
         token:String,
         gravatar:String,
         nickname:String
     };
-    let s = sign_res{
+    let s = SignRes{
         token:token,
         gravatar:user.get_gravatar_url(Some(34)),
         nickname:user.get_nickname().unwrap().clone()

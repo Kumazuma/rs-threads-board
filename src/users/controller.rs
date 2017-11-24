@@ -8,7 +8,6 @@ use users::view::*;
 use user::User;
 
 pub fn process(request:&rouille::Request, conn:&mut mysql::PooledConn, setting:&ServerSetting,ctype:ResponseContentType)->Option<rouille::Response>{
-    eprintln!("{:?}",request);
     router!(request,
     (GET)(/signup)=>{
         return Some(signup(ctype));

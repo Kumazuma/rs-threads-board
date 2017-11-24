@@ -91,18 +91,30 @@ fn parse_strikethrough<'a>(text:&'a [u8], tag:&'a [u8])->(&'a[u8], Vec<u8>){
                 msg.extend(b"</del>");
                 return (&t[2..], msg); //(&t[2..], format!("<a href=\"{}\">{}</a>",link, res));
             }
-            if &t[..2] == b"__"{
-                let mut r = parse_bold(t, &t[..2]);
+            if &t[..2] == b"{{"{
+                let mut r = parse_nomark(t);
                 res.append(&mut r.1);
                 t = r.0;
                 continue;
             }
-            if &t[..2] == b"**"{
-                let mut r = parse_bold(t, &t[..2]);
+            match &t[..2]{
+                b"**" | b"__"=>{
+                    let mut r = parse_bold(t,&t[..2]);
+                    res.append(&mut r.1);
+                    t = r.0;
+                    continue;
+                }
+                _=>{}
+            }
+        }
+        match &t[..1]{
+            b"*" | b"_"=>{
+                let mut r = parse_italic(t,&t[..1]);
                 res.append(&mut r.1);
                 t = r.0;
                 continue;
             }
+            _=>{}
         }
         if &t[..1] == b"["{
             let mut r = parse_linkmark(t);
@@ -135,6 +147,12 @@ fn parse_bold<'a>(text:&'a [u8], tag:&'a [u8])->(&'a[u8], Vec<u8>){
                 msg.extend(b"</strong>");
                 return (&t[2..], msg); //(&t[2..], format!("<a href=\"{}\">{}</a>",link, res));
             }
+            if &t[..2] == b"{{"{
+                let mut r = parse_nomark(t);
+                res.append(&mut r.1);
+                t = r.0;
+                continue;
+            }
             if &t[..2] == b"~~"{
                 let mut r = parse_strikethrough(t,&t[..2]);
                 res.append(&mut r.1);
@@ -147,6 +165,15 @@ fn parse_bold<'a>(text:&'a [u8], tag:&'a [u8])->(&'a[u8], Vec<u8>){
                 t = r.0;
                 continue;
             }
+        }
+        match &t[..1]{
+            b"*" | b"_"=>{
+                let mut r = parse_italic(t,&t[..1]);
+                res.append(&mut r.1);
+                t = r.0;
+                continue;
+            }
+            _=>{}
         }
         if &t[..1] == b"["{
             let mut r = parse_linkmark(t);
@@ -166,6 +193,89 @@ fn parse_bold<'a>(text:&'a [u8], tag:&'a [u8])->(&'a[u8], Vec<u8>){
     
     return (&text[1..],Vec::from(&tag[..1]));
 }
+fn parse_code_view<'a>(text:&'a [u8])->(&'a[u8], Vec<u8>){
+    let mut res = Vec::<u8>::new();
+    let mut t = &text[3..];
+
+    while t.len() > 0{
+        if t.len() >=3{
+            if &t[..3] == b"```"{
+                let mut msg = Vec::<u8>::new();
+                msg.extend(b"<pre>");
+                msg.append(&mut res);
+                msg.extend(b"</pre>");
+                return (&t[3..], msg); //(&t[2..], format!("<a href=\"{}\">{}</a>",link, res));
+            }            
+        }
+        let s =  &t[0..1];
+        res.extend(s);
+        t = &t[1..];
+    }
+    
+    return (&text[1..],vec![b'`']);
+}
+
+fn parse_italic<'a>(text:&'a [u8], tag:&'a [u8])->(&'a[u8], Vec<u8>){
+    let mut res = Vec::<u8>::new();
+    let mut t = &text[1..];
+
+    while t.len() > 0{
+        if t.len() >= 2{
+            match &t[..2]{
+                b"**" | b"__"=>{
+                    let mut r = parse_bold(t,&t[..2]);
+                    res.append(&mut r.1);
+                    t = r.0;
+                    continue;
+                }
+                _=>{}
+            }
+            if &t[..2] == b"{{"{
+                let mut r = parse_nomark(t);
+                res.append(&mut r.1);
+                t = r.0;
+                continue;
+            }
+            if &t[..2] == b"~~"{
+                let mut r = parse_strikethrough(t,&t[..2]);
+                res.append(&mut r.1);
+                t = r.0;
+                continue;
+            }
+            if &t[..2] == b"--"{
+                let mut r = parse_strikethrough(t, &t[..2]);
+                res.append(&mut r.1);
+                t = r.0;
+                continue;
+            }
+        }
+        if &t[..1] == tag{
+            let mut msg = Vec::<u8>::new();
+            msg.extend(b"<em>");
+            msg.append(&mut res);
+            msg.extend(b"</em>");
+            return (&t[1..], msg); //(&t[2..], format!("<a href=\"{}\">{}</a>",link, res));
+        }
+        if &t[..1] == b"["{
+            let mut r = parse_linkmark(t);
+            res.append(&mut r.1);
+            t = r.0;
+            continue;
+        }
+
+        let s = match &t[0..1]{
+            b"<"=>b"&lt;",
+            b">"=>b"&gt;",
+            c@_=>c
+        } ;
+        res.extend(s);
+        t = &t[1..];
+    }
+    
+    return (&text[1..],Vec::from(&tag[..1]));
+}
+
+
 fn parse_blackqoute(text:&[u8])->(&[u8], Vec<u8>){
     let mut t = text;
     let mut html = Vec::<u8>::new();
@@ -176,6 +286,14 @@ fn parse(text:&str)->Vec<u8>{
     let mut t:&[u8] = text.as_bytes();
     res.extend(b"<p>");
     while t.len() != 0{
+        if t.len() > 3{
+            if &t[..3] == b"```"{
+                let mut r = parse_code_view(t);
+                res.append(&mut r.1);
+                t = r.0;
+                continue;
+            }
+        }
         if t.len() > 2{
             if (t.len() == text.as_bytes().len() && &t[..1] == b">") ||
             &t[..2] == b"\n>"{
@@ -191,6 +309,7 @@ fn parse(text:&str)->Vec<u8>{
                 t = &t[2..];
                 continue;
             }
+            
             if &t[..2] == b"~~"{
                 let mut r = parse_strikethrough(t, &t[..2]);
                 res.append(&mut r.1);
@@ -209,18 +328,24 @@ fn parse(text:&str)->Vec<u8>{
                 t = r.0;
                 continue;
             }
-            if &t[..2] == b"__"{
-                let mut r = parse_bold(t,&t[..2]);
+            match &t[..2]{
+                b"**" | b"__"=>{
+                    let mut r = parse_bold(t,&t[..2]);
+                    res.append(&mut r.1);
+                    t = r.0;
+                    continue;
+                }
+                _=>{}
+            }
+        }
+        match &t[..1]{
+            b"*" | b"_"=>{
+                let mut r = parse_italic(t,&t[..1]);
                 res.append(&mut r.1);
                 t = r.0;
                 continue;
             }
-            if &t[..2] == b"**"{
-                let mut r = parse_bold(t,&t[..2]);
-                res.append(&mut r.1);
-                t = r.0;
-                continue;
-            }
+            _=>{}
         }
         if &t[..1] == b"["{
             let mut r = parse_linkmark(t);
