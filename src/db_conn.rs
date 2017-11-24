@@ -3,6 +3,7 @@ use mysql::prelude::*;
 use std;
 use model::*;
 use user::*;
+/*
 impl Model for mysql::PooledConn {
     fn get_threads_list(&mut self,offset:usize, count:usize)->Vec<Thread>{
         let sql =format!("SELECT * FROM v_thread_list LIMIT {}, {}", offset, count);
@@ -43,69 +44,9 @@ impl Model for mysql::PooledConn {
         );
         return Some(res);
     }
-    fn get_comments(&mut self, thread_uid:i32)->Option<Vec<Comment>>{
-        let sql ="SELECT * FROM v_comments WHERE thread_uid = ?";
-        let params:&[&ToValue] = &[&thread_uid];
-        let comments:Vec< _ >  = self.prep_exec(sql,params).unwrap().map(|row|{
-            let mut row = row.unwrap();
-            Comment::new(
-                row.take("uid").expect("uid"),
-                User::new()
-                .nickname(row.take("user_nickname").expect("user_nickname"))
-                    .uid(row.take("user_uid").expect("user_uid"))
-                    .email(row.take("user_email").expect("user_email")),
-                row.take("write_datetime").expect("write_datetime"),
-                row.take("comment").expect("comment")
-            )
-        }).collect();
-        if comments.len() == 0{
-            return None;
-        }
-        return Some(comments);
-    }
-    fn add_new_comment(&mut self, thread_uid:i32, user:User, content:String)->Result<(), ModelError>{
-        let mut stmt = self.prepare(r"INSERT INTO tb_comments
-                                       (thread_uid, writer_uid, write_datetime, comment)
-                                   VALUES
-                                       (:thread_uid, :writer_uid, NOW(), :comment)").unwrap();
-        if let Err(e) = stmt.execute(params!{
-            "thread_uid" => thread_uid,
-            "writer_uid" => user.get_uid(),
-            "comment" => content,
-        }){
-            return Err(ModelError::CollapseInsertData(String::from("E-Mail")));
-        }
-        Ok(())
-    }
-    fn add_thread(&mut self, subject:&String, user:User,first_comment:&String)->Result<Thread, ()>{
-        use mysql::IsolationLevel;
-        let uid:i32;
-        {
-            let mut transaction = self.start_transaction(false, Some(IsolationLevel::Serializable), Some(false)).unwrap();
-            let params:&[&ToValue] = &[&user.get_uid(), &user.get_nickname(), subject];
-            {
-                let result = transaction.prep_exec("INSERT INTO tb_threads (opener_uid, opener_nickname, subject, created_datetime) VALUES (?,?,?,now())",params).unwrap();
-                uid = result.last_insert_id() as i32;
-            }
-            transaction.prep_exec(r"INSERT INTO tb_comments
-                                       (thread_uid, writer_uid, write_datetime, comment)
-                                   VALUES
-                                       (:thread_uid, :writer_uid, NOW(), :comment)",params!{
-                "thread_uid" => uid,
-                "writer_uid" => user.get_uid(),
-                "comment" => first_comment,
-            }).unwrap();
-            transaction.commit();
-            
-        }
-        return match self.get_thread(uid){
-            Some(v)=>Ok(v),
-            None=>Err(())
-        };
-    }
     // add code here
 }
-
+*/
 impl Tag{
     pub fn list(model:&mut mysql::PooledConn, q:&str)->Vec<Tag>{
         let sql = "SELECT * FROM v_tag_threads_count_list where tag_name LIKE ?";
@@ -123,7 +64,7 @@ impl Tag{
         let params:&[&ToValue] = &[&name];
 
         let mut threads:Vec<Thread> = Vec::new();
-        let thread_uids:Vec<i32> = 
+        let thread_uids:Vec<u32> = 
         model.prep_exec(sql,params).unwrap().map(|row|{
             let row = row.unwrap();
             //eprintln!("{:?}",row);
@@ -131,7 +72,7 @@ impl Tag{
         }).collect();
         //.into_iter()
         for uid in thread_uids{
-            threads.push(match model.get_thread(uid){
+            threads.push(match Thread::get( model, uid){
                 Some(v)=>v,
                 None=>continue
             });
@@ -150,6 +91,57 @@ impl Tag{
     }
 }
 impl Thread{
+    pub fn upload(conn:&mut mysql::PooledConn, subject:&String, user:User,first_comment:&String)->Result<Self,()>{
+        use mysql::IsolationLevel;
+        let uid:u32;
+        {
+            let mut transaction = conn.start_transaction(false, Some(IsolationLevel::Serializable), Some(false)).unwrap();
+            let params:&[&ToValue] = &[&user.get_uid(), &user.get_nickname(), subject];
+            {
+                let result = transaction.prep_exec("INSERT INTO tb_threads (opener_uid, opener_nickname, subject, created_datetime) VALUES (?,?,?,now())",params).unwrap();
+                uid = result.last_insert_id() as u32;
+            }
+            transaction.prep_exec(r"INSERT INTO tb_comments
+                                       (thread_uid, writer_uid, write_datetime, comment)
+                                   VALUES
+                                       (:thread_uid, :writer_uid, NOW(), :comment)",params!{
+                "thread_uid" => uid,
+                "writer_uid" => user.get_uid(),
+                "comment" => first_comment,
+            }).unwrap();
+            transaction.commit();
+        }
+        return match  Self::get(conn, uid){
+            Some(v)=>Ok(v),
+            None=>Err(())
+        };
+    }
+    pub fn get(conn:&mut mysql::PooledConn, uid:u32)->Option<Self>{
+        let sql ="SELECT * FROM v_thread_list WHERE uid = ?";
+        let params:&[&ToValue] = &[&uid];
+        let row  = conn.first_exec(sql,params).unwrap();
+        match row{
+            Some(mut row)=>{
+                let thread = Thread::new(
+                    row.take("uid").expect("uid"),
+                    row.take("subject").expect("uid"),
+                    row.take("recent_update").expect("recent_update"),
+                    row.take("created_datetime").expect("created_datetime"),
+                    User::new()
+                        .uid(row.take("opener_uid").expect("opener_uid"))
+                        .nickname(row.take("opener_nickname").expect("opener_nickname"))
+                        .email(row.take("opener_email").expect("opener_email"))
+                );
+                return Some(thread);
+            }, 
+            None=>return None
+        }
+    }
+    pub fn delete(self, conn:&mut mysql::PooledConn){
+        let sql ="DELETE FROM tb_threads WHERE uid = ?";
+        let params:&[&ToValue] = &[&self.get_uid()];
+        conn.first_exec(sql,params).unwrap();
+    }
     pub fn list(model:&mut mysql::PooledConn ,mut q: Option<String>, offset:usize, count:usize)->Vec<Thread>{
         //let sql =format!("SELECT * FROM v_thread_list WHERE subject like ?");
         let mut sql = String::from("SELECT * FROM v_thread_list ");

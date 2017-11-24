@@ -46,15 +46,6 @@ pub enum ModelError{
     IncorrectThread,
     IncorrectUser
 }
-pub trait Model{
-     fn get_threads_list(&mut self,offset:usize, count:usize)->Vec<Thread>;
-     //fn add_new_user(&mut self, user:User)->Result<(), ModelError>;
-     fn get_thread(&mut self, thread_uid:i32)->Option<Thread>;
-     fn add_new_comment(&mut self, thread_uid:i32, user:User, content:String)->Result<(), ModelError>;
-     fn add_thread(&mut self, subject:&String, user:User,first_comment:&String)->Result<Thread,()>;
-     fn get_comments(&mut self, thread_uid:i32)->Option<Vec<Comment>>;
-
-}
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Comment{
     uid:u32,
@@ -108,6 +99,34 @@ impl Comment{
         let params:&[&ToValue] = &[&self.uid];
         conn.first_exec(sql,params).unwrap();
     }
+    pub fn list(conn:&mut mysql::PooledConn, thread_uid:u32)->Vec<Self>{
+        let sql ="SELECT * FROM v_comments WHERE thread_uid = ?";
+        let params:&[&ToValue] = &[&thread_uid];
+        let comments:Vec< _ >  = conn.prep_exec(sql,params).unwrap().map(|row|{
+            let mut row = row.unwrap();
+            Comment::new(
+                row.take("uid").expect("uid"),
+                User::new()
+                .nickname(row.take("user_nickname").expect("user_nickname"))
+                    .uid(row.take("user_uid").expect("user_uid"))
+                    .email(row.take("user_email").expect("user_email")),
+                row.take("write_datetime").expect("write_datetime"),
+                row.take("comment").expect("comment")
+            )
+        }).collect();
+        return comments;
+    }
+    pub fn upload(conn:&mut mysql::PooledConn, thread:&Thread, user:&User, comment:&str){
+        let mut stmt = conn.prepare(r"INSERT INTO tb_comments
+                                       (thread_uid, writer_uid, write_datetime, comment)
+                                   VALUES
+                                       (:thread_uid, :writer_uid, NOW(), :comment)").unwrap();
+        stmt.execute(params!{
+            "thread_uid" => thread.get_uid(),
+            "writer_uid" => user.get_uid(),
+            "comment" => comment,
+        });
+    }
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Thread{
@@ -143,34 +162,7 @@ impl Thread{
     pub fn get_open_datetime(&self)->&NaiveDateTime{
         &self.open_datetime
     }
-
-
-    pub fn get(conn:&mut mysql::PooledConn, uid:u32)->Option<Self>{
-        let sql ="SELECT * FROM v_thread_list WHERE uid = ?";
-        let params:&[&ToValue] = &[&uid];
-        let row  = conn.first_exec(sql,params).unwrap();
-        match row{
-            Some(mut row)=>{
-                let thread = Thread::new(
-                    row.take("uid").expect("uid"),
-                    row.take("subject").expect("uid"),
-                    row.take("recent_update").expect("recent_update"),
-                    row.take("created_datetime").expect("created_datetime"),
-                    User::new()
-                        .uid(row.take("opener_uid").expect("opener_uid"))
-                        .nickname(row.take("opener_nickname").expect("opener_nickname"))
-                        .email(row.take("opener_email").expect("opener_email"))
-                );
-                return Some(thread);
-            }, 
-            None=>return None
-        }
-    }
-    pub fn delete(self, conn:&mut mysql::PooledConn){
-        let sql ="DELETE FROM tb_threads WHERE uid = ?";
-        let params:&[&ToValue] = &[&self.uid];
-        conn.first_exec(sql,params).unwrap();
-    }
+    
 }
 
 

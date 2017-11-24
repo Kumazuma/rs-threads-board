@@ -92,7 +92,6 @@ impl User {
             "nickname" => self.get_nickname(),
             "password" => self.get_password(),
         }){
-            eprintln!("{}", v.last_insert_id());
             return Ok(self.uid(v.last_insert_id() as i32));
         }
         return Err(());
