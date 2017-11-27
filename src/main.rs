@@ -45,7 +45,7 @@ pub fn process(request:&rouille::Request, _:&mut mysql::PooledConn, _:&ServerSet
         let css_path = Path::new("./css").join(css);
         //println!("{:?}",css_path.as_path());
         if let Ok(file) = File::open(css_path.clone()){
-            println!("{:?}",css_path);
+            //println!("{:?}",css_path);
             return Some(rouille::Response::from_file("text/css",file));
         }
         return Some(rouille::Response::empty_404());

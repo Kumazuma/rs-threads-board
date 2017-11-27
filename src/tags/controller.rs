@@ -35,7 +35,6 @@ pub fn process(request:&rouille::Request, conn:&mut mysql::PooledConn, setting:&
     },
     (GET) (/tags)=>{
         //let tags = thread_n_tag::get_tags(&mut model);
-        let mut buffer:Vec<u8> = vec![];
         let tag_list = match request.get_param("q"){
             Some(v)=>Tag::list(conn,Some(&v)),
             None=>Tag::list(conn,None)

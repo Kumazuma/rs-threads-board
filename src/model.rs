@@ -100,7 +100,7 @@ impl Comment{
         conn.first_exec(sql,params).unwrap();
     }
     pub fn e_tag(conn:&mut mysql::PooledConn, thread_uid:u32)->String{
-        let sql ="SELECT md5(write_datetime) FROM v_comments WHERE thread_uid = ? LIMIT 1";
+        let sql ="SELECT md5(recent_update) FROM tb_threads WHERE uid = ?";
         let params:&[&ToValue] = &[&thread_uid];
         let row = conn.first_exec(sql,params).unwrap();
         let mut row = row.unwrap();
