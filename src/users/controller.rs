@@ -38,15 +38,23 @@ pub fn process(request:&rouille::Request, conn:&mut mysql::PooledConn, setting:&
             }
         };
     },
-    (POST)(/login)=>{
+    (GET)(/login)=>{
+        /*
         let post = match post_input!(request, {email: String,password: String,}){
             Ok(v)=>v,
             Err( _ )=>{
                 return Some(error("파라메터가 부정확합니다.",403));
             }
         };
-        let password = to_sha3(&post.password);
-        let email = post.email;
+        */
+        let password =match request.get_param("password"){
+            Some(v)=>to_sha3(&v),
+            None=>return Some(error("파라메터가 부정확합니다.",403))
+        };
+        let email = match request.get_param("email"){
+            Some(v)=>v,
+            None=>return Some(error("파라메터가 부정확합니다.",403))
+        };
         let mut user = User::new().email(email);
         if let Err( _ ) = user.find_by_email(conn){
             return Some(error("계정이 존재하지 않습니다.",403));

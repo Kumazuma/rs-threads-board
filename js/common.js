@@ -36,7 +36,7 @@ $(document).ready(()=>{
     $("#sign-in-form").on("submit",(e)=>{
         let ajax_args = {
             url:e.currentTarget.action,
-            method:"POST",
+            method:"GET",
             Accept:"application/json",
             dataType:"json",
             data:$("#sign-in-form").serialize()
