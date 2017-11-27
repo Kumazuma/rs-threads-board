@@ -18,21 +18,55 @@ pub fn process(request:&rouille::Request, conn:&mut mysql::PooledConn, setting:&
             Some(v)=>v.parse().unwrap_or(25usize),
             None=>25usize
         };
-        let list = Thread::list( conn, q, offset,count);
-        return Some(thread_list_view(ctype, list));
+        let r_etag:Option<&str> = match request.header("If-None-Match"){
+            Some(v) if v.len() > 2=>{
+                Some(&v[1..v.len()-1])   
+            },
+            _=>None
+        };
+        let etag = Thread::e_tag(conn, offset, &q);
+        match r_etag{
+            Some(t) if t == &etag=>{
+                return Some(rouille::Response::from_data("",vec![])
+                .with_status_code(304)
+                .with_etag_keep(etag));
+            }
+            _=>{
+                let list = Thread::list( conn, q, offset,count);
+                return Some(thread_list_view(ctype, list).with_etag_keep(etag));
+            }
+        }
     },
     (GET)(/threads)=>{
         let q:Option<String> = request.get_param("q");
+        
         let offset:usize = match request.get_param("offset"){
             Some(v)=>v.parse().unwrap_or(0usize),
             None=>0usize
         };
+
         let count:usize = match request.get_param("count"){
             Some(v)=>v.parse().unwrap_or(25usize),
             None=>25usize
         };
-        let list = Thread::list( conn, q, offset,count);
-        return Some(thread_list_view(ctype, list));
+        let r_etag:Option<&str> = match request.header("If-None-Match"){
+            Some(v) if v.len() > 2=>{
+                Some(&v[1..v.len()-1])   
+            },
+            _=>None
+        };
+        let etag = Thread::e_tag(conn, offset, &q);
+        match r_etag{
+            Some(t) if t == &etag=>{
+                return Some(rouille::Response::from_data("",vec![])
+                .with_status_code(304)
+                .with_etag_keep(etag));
+            }
+            _=>{
+                let list = Thread::list( conn, q, offset,count);
+                return Some(thread_list_view(ctype, list).with_etag_keep(etag));
+            }
+        }
     },
     (POST)(/threads)=>{
         let input = post_input!(request, {

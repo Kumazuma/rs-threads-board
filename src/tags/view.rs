@@ -18,9 +18,6 @@ pub fn tag_list_view(content_type:ResponseContentType, tag_list:Vec<Tag> )->roui
         }
     }
 }
-pub fn threadsin_tag_view(content_type:ResponseContentType, thread_list:Vec<Thread> )->rouille::Response{
-
-}
 pub fn ok_view(content_type:ResponseContentType)->rouille::Response{
     return rouille::Response::from_data("application/json", "{}");
 }

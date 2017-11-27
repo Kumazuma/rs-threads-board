@@ -81,6 +81,23 @@ impl Tag{
     }
 }
 impl Thread{
+    pub fn e_tag(conn:&mut mysql::PooledConn, offset:usize, q:&Option<String>)->String{
+        let row  =if let &Some(ref q) = q{
+            let t = format!("%{}%", q);
+            let params:&[&ToValue]= &[&t, &offset];
+            conn.first_exec("SELECT md5(recent_update) FROM v_thread_list WHERE subject LIKE ? LIMIT ?, 1",params).unwrap()
+        }
+        else{
+            let params:&[&ToValue] = &[&offset];
+            conn.first_exec("SELECT md5(recent_update) FROM v_thread_list LIMIT ?, 1",params).unwrap()
+        };
+        let mut row = row.unwrap();
+        let md5:String = match row.take(0){
+            Some(v)=>v,
+            None=>String::from("aaaa")
+        };
+        return md5;
+    }
     pub fn upload(conn:&mut mysql::PooledConn, subject:&String, user:User,first_comment:&String)->Result<Self,()>{
         use mysql::IsolationLevel;
         let uid:u32;
