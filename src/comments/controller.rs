@@ -10,8 +10,26 @@ use model::Comment;
 pub fn process(request:&rouille::Request, conn:&mut mysql::PooledConn, setting:&ServerSetting,ctype:ResponseContentType)->Option<rouille::Response>{
     router!(request,
     (GET) (/threads/{uid:u32}/comments)=>{
-        let comments = Comment::list( conn, uid);
-        return Some(comment_list_view(ctype,comments));
+        
+        let r_etag:Option<&str> = match request.header("If-None-Match"){
+            Some(v) if v.starts_with("\"") => Some(&v[1..v.len()-1]),
+            Some(v)=>Some(v),
+            _=>None
+        };
+        let etag = Comment::e_tag(conn, uid);
+
+        match r_etag{
+            Some(t) if t == &etag=>{
+                
+                return Some(rouille::Response::from_data("",vec![])
+                .with_status_code(304)
+                .with_etag_keep(etag));
+            }
+            _=>{
+                let list = Comment::list( conn, uid);;
+                return Some(comment_list_view(ctype, list).with_etag_keep(etag));
+            }
+        }
     },
     (POST) (/threads/{uid:u32}/comments)=>{
         let input = post_input!(request, {

@@ -31,7 +31,8 @@ mod preview;
 type ControllerReturnType = Option<rouille::Response>;
 type ContorllerType = Fn(&rouille::Request, &mut mysql::PooledConn, &ServerSetting,ResponseContentType)->ControllerReturnType;
 
-pub fn process(request:&rouille::Request, _:&mut mysql::PooledConn, setting:&ServerSetting,ctype:ResponseContentType)->ControllerReturnType{
+pub fn process(request:&rouille::Request, _:&mut mysql::PooledConn, _:&ServerSetting,_:ResponseContentType)->ControllerReturnType{
+    
     router!(request,
     (GET) (/write)=>{
         let mut s = Vec::new();
@@ -40,14 +41,14 @@ pub fn process(request:&rouille::Request, _:&mut mysql::PooledConn, setting:&Ser
         return Some(rouille::Response::from_data("text/html;charset=utf-8", s));
     },
     (GET) (/css/{css:String}) =>{
+        //println!("{}",css);
         let css_path = Path::new("./css").join(css);
         //println!("{:?}",css_path.as_path());
-        if let Ok(file) = File::open(css_path){
+        if let Ok(file) = File::open(css_path.clone()){
+            println!("{:?}",css_path);
             return Some(rouille::Response::from_file("text/css",file));
         }
-        else{
-            return Some(rouille::Response::empty_404());
-        }
+        return Some(rouille::Response::empty_404());
     },
     (GET) (/fonts/{font:String}) =>{
         let font_path = Path::new("./font").join(font);
@@ -74,7 +75,7 @@ pub fn process(request:&rouille::Request, _:&mut mysql::PooledConn, setting:&Ser
 }
 
 
-const controllers:&[&ContorllerType] = &[
+const CONTROLLERS:&[&ContorllerType] = &[
     &comments::controller::process,
     &threads::controller::process,
     &profile::controller::process,
@@ -115,7 +116,7 @@ fn main() {
         //eprintln!("{}",setting.db);
         let mut model = try_or_400!(pool.get_conn());
         let t = common::check_accept_type(request);
-        for controller in controllers{
+        for controller in CONTROLLERS{
             if let Some(v) = controller(request, &mut model, setting,t){
                 return v;
             }
