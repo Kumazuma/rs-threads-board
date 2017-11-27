@@ -99,6 +99,13 @@ impl Comment{
         let params:&[&ToValue] = &[&self.uid];
         conn.first_exec(sql,params).unwrap();
     }
+    pub fn e_tag(conn:&mut mysql::PooledConn, thread_uid:u32)->String{
+        let sql ="SELECT md5(write_datetime) FROM v_comments WHERE thread_uid = ? LIMIT 1";
+        let params:&[&ToValue] = &[&thread_uid];
+        let row = conn.first_exec(sql,params).unwrap();
+        let mut row = row.unwrap();
+        return row.take(0).unwrap();
+    }
     pub fn list(conn:&mut mysql::PooledConn, thread_uid:u32)->Vec<Self>{
         let sql ="SELECT * FROM v_comments WHERE thread_uid = ?";
         let params:&[&ToValue] = &[&thread_uid];
