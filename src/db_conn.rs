@@ -92,9 +92,12 @@ impl Thread{
         }
     }
     pub fn delete(self, conn:&mut mysql::PooledConn){
-        let sql ="DELETE FROM tb_threads WHERE uid = ?";
+        use mysql::IsolationLevel;
+        let mut transaction = conn.start_transaction(false, Some(IsolationLevel::Serializable), Some(false)).unwrap();
         let params:&[&ToValue] = &[&self.get_uid()];
-        conn.first_exec(sql,params).unwrap();
+        transaction.prep_exec("UPDATE tb_threads SET first_comment = NULL WHERE uid = ? ",params).unwrap();
+        transaction.first_exec("DELETE FROM tb_threads WHERE uid = ?",params).unwrap();
+        transaction.commit();
     }
     pub fn list(model:&mut mysql::PooledConn ,mut q: Option<String>, offset:usize, count:usize)->Vec<Thread>{
         //let sql =format!("SELECT * FROM v_thread_list WHERE subject like ?");

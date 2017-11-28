@@ -38,14 +38,14 @@ pub fn process(request:&rouille::Request, conn:&mut mysql::PooledConn, setting:&
             return Some(error("권한이 없습니다.",403));
         }
 
-        let current_password = to_sha3(&param.current_password);
+        let current_password = to_sha3(param.current_password.trim());
         let new_password = if param.new_password.trim().len() != 0{
-            to_sha3(&param.new_password)
+            to_sha3(param.new_password.trim())
         } 
         else{
             current_password.clone()
         };
-        if user.get_password().unwrap() == &current_password{
+        if nuser.get_password().unwrap() == &current_password{
             let user = nuser.password(new_password).nickname(param.nickname);
             user.update(conn);
         }
